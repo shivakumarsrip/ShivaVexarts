@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { createRouter, publicQuery, authedQuery, adminQuery } from "./middleware";
-import { getDb } from "./queries/connection";
-import { orders, orderItems, artworks } from "../db/schema";
+import { createRouter, publicQuery, authedQuery, adminQuery } from "./middleware.js";
+import { getDb } from "./queries/connection.js";
+import { orders, orderItems, artworks } from "../db/schema.js";
+
 import { eq, desc } from "drizzle-orm";
 
 export const orderRouter = createRouter({
