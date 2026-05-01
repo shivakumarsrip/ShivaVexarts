@@ -79,9 +79,11 @@ export const authRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      console.log(`[AUTH] Login attempt for: ${input.email}`);
+
       // Safety check for critical env variables
       if (!env.jwtSecret) {
-        console.error("CRITICAL ERROR: JWT_SECRET is missing from environment variables.");
+        console.error("[AUTH] CRITICAL ERROR: JWT_SECRET is missing from environment variables.");
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Server configuration error. Please check environment variables.",
@@ -90,6 +92,7 @@ export const authRouter = createRouter({
 
       const user = await findUserByEmail(input.email);
       if (!user) {
+        console.warn(`[AUTH] Login failed: User not found (${input.email})`);
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password.",
@@ -98,6 +101,7 @@ export const authRouter = createRouter({
 
       const valid = await bcrypt.compare(input.password, user.password);
       if (!valid) {
+        console.warn(`[AUTH] Login failed: Invalid password for ${input.email}`);
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password.",

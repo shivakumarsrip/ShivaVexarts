@@ -44,15 +44,48 @@ app.post("/api/upload", async (c) => {
 
 // ── TRPC Adapter ─────────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c) => {
-  return fetchRequestHandler({
-    endpoint: "/api/trpc",
-    req: c.req.raw,
-    router: appRouter,
-    createContext,
-  });
+  try {
+    return await fetchRequestHandler({
+      endpoint: "/api/trpc",
+      req: c.req.raw,
+      router: appRouter,
+      createContext,
+    });
+  } catch (err: any) {
+    console.error("TRPC Adapter Crash:", err);
+    return c.json({ 
+      error: "TRPC Adapter Error", 
+      message: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+    }, 500);
+  }
+});
+
+// ── Debug Auth Endpoint ──────────────────────────────────────────────────────
+app.get("/api/debug-auth", async (c) => {
+  const { getDb } = await import("./queries/connection");
+  const { env } = await import("./lib/env");
+  
+  try {
+    const db = getDb();
+    const result = await db.execute("SELECT 1 as connected");
+    return c.json({
+      db_connected: true,
+      jwt_secret_present: !!env.jwtSecret,
+      env_keys: Object.keys(process.env).filter(k => k.includes("URL") || k.includes("TOKEN")),
+      db_test: result
+    });
+  } catch (err: any) {
+    return c.json({
+      db_connected: false,
+      error: err.message,
+      stack: err.stack
+    }, 500);
+  }
 });
 
 // ── Fallback ─────────────────────────────────────────────────────────────────
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
+
 
 export default app;
