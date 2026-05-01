@@ -1,24 +1,36 @@
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+import mainApp from "./boot";
 
+// Entry point for Vercel Serverless Functions
 const app = new Hono();
 
-// ── Super Simple Health Check ───────────────────────────────────────────────
+// Global Logger
+app.use("*", async (c, next) => {
+  console.log(`[${c.req.method}] ${c.req.url}`);
+  await next();
+});
+
+// Priority Health Check
 app.get("/api/health", (c) => {
   return c.json({
     status: "ok",
-    message: "Hono is alive and isolated!",
-    vercel: true,
+    message: "Shiva Vexarts API is active",
     timestamp: new Date().toISOString()
   });
 });
 
-// ── We will re-import the main app once we verify this works ───────────────
-// import mainApp from "./boot";
-// app.route("/", mainApp);
+// Mount Main App
+app.route("/", mainApp);
 
-export const config = {
-  runtime: "nodejs",
-};
+// Error Handler
+app.onError((err, c) => {
+  console.error("Vercel Function Error:", err);
+  return c.json({ 
+    error: "Internal Server Error", 
+    message: err.message,
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+  }, 500);
+});
 
 export default handle(app);

@@ -7,15 +7,15 @@ import { put } from "@vercel/blob";
 
 const app = new Hono();
 
+// Apply body limit to all routes
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-// ── Super-Stable Health Check (No Imports) ──────────────────────────────────
+// ── Stable Health Check ─────────────────────────────────────────────────────
 app.get("/api/health", (c) => {
   return c.json({
     status: "ok",
-    message: "Hono is alive!",
-    vercel: !!process.env.VERCEL,
-    env_keys: Object.keys(process.env).filter(k => !k.includes("TOKEN") && !k.includes("SECRET") && !k.includes("URL")),
+    message: "Hono is healthy",
+    uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });
 });
@@ -52,6 +52,7 @@ app.use("/api/trpc/*", async (c) => {
   });
 });
 
+// ── Fallback ─────────────────────────────────────────────────────────────────
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
 export default app;
