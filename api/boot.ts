@@ -4,13 +4,14 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
-import "dotenv/config"; // Ensure .env is loaded locally
+import { put } from "@vercel/blob";
+import "dotenv/config"; 
 
 const app = new Hono();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-// Health Check Endpoint for Debugging
+// ── Health Check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (c) => {
   return c.json({
     status: "ok",
@@ -24,6 +25,29 @@ app.get("/api/health", (c) => {
   });
 });
 
+// ── Image Upload (Vercel Blob) ───────────────────────────────────────────────
+app.post("/api/upload", async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get("file") as File;
+    
+    if (!file) {
+      return c.json({ error: "No file uploaded" }, 400);
+    }
+
+    const blob = await put(file.name, file, {
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN
+    });
+
+    return c.json(blob);
+  } catch (error: any) {
+    console.error("Upload error:", error);
+    return c.json({ error: error.message || "Upload failed" }, 500);
+  }
+});
+
+// ── TRPC Adapter ─────────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",

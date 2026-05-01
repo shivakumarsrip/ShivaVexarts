@@ -51,7 +51,7 @@ export default function AboutSection() {
                 visual narratives that command attention.
               </p>
               <p className="font-body text-[16px] text-[#A1A1AA] leading-[1.7]">
-                From gritty movie posters for Tamil cinema to social awareness campaigns, every
+                From gritty movie posters for Telugu cinema to social awareness campaigns, every
                 piece is crafted with cinematic intensity and digital precision. My work has
                 garnered over 387,000 views and 14,000+ appreciations across platforms.
               </p>
@@ -73,7 +73,7 @@ export default function AboutSection() {
           <div className="lg:col-span-2">
             <div className="relative">
               <img
-                src="/hero-portrait.jpg"
+                src="https://ucr5bvewbolhssax.public.blob.vercel-storage.com/Shiva.jpg"
                 alt="Shivakumar S - Digital Artist"
                 className="w-full max-w-[400px] mx-auto rounded-2xl object-cover border border-[rgba(245,158,11,0.15)]"
                 style={{ aspectRatio: "3/4" }}

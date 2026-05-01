@@ -50,7 +50,7 @@ export const artworks = pgTable("artworks", {
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull(),
   category: varchar("category", { length: 100 }).notNull(),
-  collection: collectionEnum("collection").notNull(),
+  collection: varchar("collection", { length: 100 }).notNull(),
   description: text("description"),
   image: varchar("image", { length: 500 }).notNull(),
   basePrice: integer("base_price").notNull(),

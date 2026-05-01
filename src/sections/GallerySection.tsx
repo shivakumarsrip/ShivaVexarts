@@ -1,56 +1,46 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/providers/trpc";
 import ArtworkCard from "@/components/ArtworkCard";
 import { Loader2 } from "lucide-react";
+import type { Artwork } from "@db/schema";
 
-const collections = [
-  {
-    id: "portraits" as const,
-    label: "COLLECTION 01",
+// Registry for professional descriptions of known collections
+const collectionMetadata: Record<string, { title: string; description: string }> = {
+  portraits: {
     title: "CELEBRITY PORTRAITS",
-    description:
-      "Precision vector portraits of iconic figures from cinema, sports, and music. Every detail is meticulously crafted to capture the essence of the legend.",
-    filters: ["All", "Cricketer", "Tollywood", "Hollywood", "Bollywood", "Musician"],
+    description: "Precision vector portraits of iconic figures from cinema, sports, and music. Every detail is meticulously crafted to capture the essence of the legend.",
   },
-  {
-    id: "fan_art" as const,
-    label: "COLLECTION 02",
+  fan_art: {
     title: "SUPERHEROES & FAN ART",
-    description:
-      "A tribute to the characters we love. From the gritty streets of Gotham to the vibrant Marvel universe, explore our unique take on legendary heroes.",
-    filters: ["All", "Marvel", "DC Comics"],
+    description: "A tribute to the characters we love. From the gritty streets of Gotham to the vibrant Marvel universe, explore our unique take on legendary heroes.",
   },
-  {
-    id: "posters" as const,
-    label: "COLLECTION 03",
+  posters: {
     title: "MOVIE POSTERS",
-    description:
-      "Cinematic posters that tell a story. High-impact designs inspired by the biggest blockbusters, perfect for any movie lover's collection.",
-    filters: ["All", "Tollywood", "Action"],
+    description: "Cinematic posters that tell a story. High-impact designs inspired by the biggest blockbusters, perfect for any movie lover's collection.",
   },
-  {
-    id: "illustrations" as const,
-    label: "COLLECTION 04",
+  illustrations: {
     title: "CONCEPTUAL ILLUSTRATIONS",
-    description:
-      "Original conceptual pieces and digital illustrations exploring themes of scenery, emotion, and surrealism.",
-    filters: ["All", "Landscape", "Illustration", "Scenery", "Artistic"],
+    description: "Original conceptual pieces and digital illustrations exploring themes of scenery, emotion, and surrealism.",
   },
-  {
-    id: "devotional" as const,
-    label: "COLLECTION 05",
+  devotional: {
     title: "DEVOTIONAL ART",
-    description:
-      "Divine and spiritual digital paintings that bring peace and energy to your space. A modern approach to traditional deities.",
-    filters: ["All", "Devotional"],
+    description: "Divine and spiritual digital paintings that bring peace and energy to your space. A modern approach to traditional deities.",
   },
-];
+};
+
+interface DynamicCollection {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  filters: string[];
+}
 
 function GalleryChapter({
   collection,
   isLast,
 }: {
-  collection: (typeof collections)[0];
+  collection: DynamicCollection;
   isLast: boolean;
 }) {
   const [activeFilter, setActiveFilter] = useState("All");
@@ -58,7 +48,7 @@ function GalleryChapter({
     collection: collection.id,
     category: activeFilter === "All" ? undefined : activeFilter,
   }, {
-    staleTime: 5 * 60 * 1000, // Cache artworks for 5 minutes locally
+    staleTime: 5 * 60 * 1000,
   });
 
   const hasArtworks = (artworks && artworks.length > 0);
@@ -72,7 +62,6 @@ function GalleryChapter({
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 500px' }}
       className={`${isLast ? "" : "mb-24 md:mb-36"} animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out`}
     >
-      {/* Chapter Header */}
       <div className="mb-12 md:mb-16">
         <span className="font-body text-[12px] sm:text-[14px] font-bold text-[#F59E0B] tracking-[0.25em] uppercase">
           {collection.label}
@@ -84,7 +73,6 @@ function GalleryChapter({
           {collection.description}
         </p>
 
-        {/* Filter Pills */}
         <div className="flex flex-wrap gap-2.5 mt-8">
           {collection.filters.map((filter) => (
             <button
@@ -102,7 +90,6 @@ function GalleryChapter({
         </div>
       </div>
 
-      {/* Artwork Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={32} className="text-[#F59E0B] animate-spin" />
@@ -119,18 +106,52 @@ function GalleryChapter({
 }
 
 export default function GallerySection() {
+  const { data: allArtworks, isLoading } = trpc.artwork.listAll.useQuery();
+
+  const dynamicCollections = useMemo(() => {
+    if (!allArtworks) return [];
+
+    // Group artworks by collection
+    const groups: Record<string, Artwork[]> = {};
+    allArtworks.forEach(art => {
+      if (!groups[art.collection]) groups[art.collection] = [];
+      groups[art.collection].push(art);
+    });
+
+    // Transform into DynamicCollection format
+    return Object.entries(groups).map(([colId, arts], index) => {
+      const meta = collectionMetadata[colId];
+      const uniqueFilters = ["All", ...new Set(arts.map(a => a.category))].sort();
+
+      return {
+        id: colId,
+        label: `COLLECTION ${String(index + 1).padStart(2, '0')}`,
+        title: meta?.title || colId.replace(/_/g, " ").toUpperCase(),
+        description: meta?.description || `Explore our unique collection of ${colId.replace(/_/g, " ")} digital art.`,
+        filters: uniqueFilters
+      };
+    });
+  }, [allArtworks]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#09090B] flex items-center justify-center">
+        <Loader2 size={48} className="text-[#F59E0B] animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <section id="gallery" className="relative py-24 md:py-40 bg-[#09090B]">
-      {/* Subtle background ambient light */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#F59E0B]/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#F59E0B]/3 blur-[150px] rounded-full pointer-events-none" />
       
       <div className="container-vex relative z-10">
-        {collections.map((collection, index) => (
+        {dynamicCollections.map((collection, index) => (
           <GalleryChapter
             key={collection.id}
             collection={collection}
-            isLast={index === collections.length - 1}
+            isLast={index === dynamicCollections.length - 1}
           />
         ))}
       </div>
