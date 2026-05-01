@@ -6,10 +6,13 @@ import * as relations from "../../db/relations";
 
 const fullSchema = { ...schema, ...relations };
 
-let instance: ReturnType<typeof drizzle<typeof fullSchema>>;
+let instance: any = null;
 
 export function getDb() {
   if (!instance) {
+    if (!env.databaseUrl) {
+      throw new Error("DATABASE_URL is not set in environment variables");
+    }
     const sql = neon(env.databaseUrl);
     instance = drizzle(sql, { schema: fullSchema });
   }
