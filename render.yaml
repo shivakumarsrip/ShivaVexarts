@@ -1,22 +1,20 @@
-# render.yaml — Render deployment configuration
-# Docs: https://render.com/docs/blueprint-spec
-
 services:
   - type: web
     name: shiva-vexarts
-    runtime: docker
-    dockerfilePath: ./Dockerfile
+    runtime: node
     plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false          # Set this in Render dashboard → Environment
+        fromEnvVar: DATABASE_URL
       - key: JWT_SECRET
-        sync: false          # Set this in Render dashboard → Environment
+        fromEnvVar: JWT_SECRET
       - key: ADMIN_EMAIL
-        sync: false          # Your admin email address
+        fromEnvVar: ADMIN_EMAIL
       - key: BLOB_READ_WRITE_TOKEN
-        sync: false          # Your Vercel Blob token
+        fromEnvVar: BLOB_READ_WRITE_TOKEN
       - key: VITE_BLOB_BASE_URL
-        sync: false          # Your Vercel Blob base URL
+        fromEnvVar: VITE_BLOB_BASE_URL
