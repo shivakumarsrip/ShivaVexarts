@@ -1,8 +1,8 @@
 import * as jose from "jose";
 import * as cookie from "cookie";
 import { env } from "./env";
-import { Session } from "@contracts/constants";
-import { Errors } from "@contracts/errors";
+import { Session } from "../../contracts/constants";
+import { Errors } from "../../contracts/errors";
 import { findUserById } from "../queries/users";
 
 const JWT_ALG = "HS256";

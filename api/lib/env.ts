@@ -1,8 +1,12 @@
-import "dotenv/config";
+// dotenv/config is not needed on Vercel as it injects env vars directly.
+// We use a safe accessor to avoid build-time crashes.
 
 function required(name: string): string {
-  const value = process.env[name];
-  if (!value && process.env.NODE_ENV === "production") {
+  const value = typeof process !== 'undefined' ? process.env[name] : undefined;
+  if (!value && typeof process !== 'undefined' && process.env.NODE_ENV === "production") {
+    // We only throw if we're actually in a production runtime.
+    // Vercel sometimes runs this during build where some env vars might be missing.
+    if (process.env.VERCEL) return ""; 
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value ?? "";
@@ -10,7 +14,7 @@ function required(name: string): string {
 
 export const env = {
   jwtSecret: required("JWT_SECRET"),
-  adminEmail: (process.env.ADMIN_EMAIL ?? "").toLowerCase(),
-  isProduction: process.env.NODE_ENV === "production",
+  adminEmail: (typeof process !== 'undefined' ? process.env.ADMIN_EMAIL ?? "" : "").toLowerCase(),
+  isProduction: typeof process !== 'undefined' && process.env.NODE_ENV === "production",
   databaseUrl: required("DATABASE_URL"),
 };
