@@ -78,17 +78,39 @@ const appRouter = t.router({
   auth: t.router({
     me: authedQuery.query((opts) => opts.ctx.user),
     login: publicQuery.input(z.object({ email: z.string().email(), password: z.string() })).mutation(async ({ input, ctx }) => {
+      console.log("[AUTH] STEP 1: Login started");
       const db = getDb();
-      const user = (await db.select().from(schema.users).where(eq(schema.users.email, input.email)))[0];
-      if (!user || !(await bcrypt.compare(input.password, user.password))) {
+      console.log("[AUTH] STEP 2: DB Instance ready");
+      
+      const userRows = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
+      console.log(`[AUTH] STEP 3: DB Query finished. Found ${userRows.length} users`);
+      
+      const user = userRows[0];
+      if (!user) {
+        console.log("[AUTH] STEP 4: User not found");
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
+
+      console.log("[AUTH] STEP 5: Starting bcrypt.compare...");
+      const isMatch = await bcrypt.compare(input.password, user.password);
+      console.log(`[AUTH] STEP 6: bcrypt finished. Match: ${isMatch}`);
+
+      if (!isMatch) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      }
+
+      console.log("[AUTH] STEP 7: Starting JWT sign...");
       const token = await signSessionToken({ userId: user.id, role: user.role });
+      console.log("[AUTH] STEP 8: JWT signed");
+
       ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, token, { 
         httpOnly: true, path: "/", sameSite: "lax", secure: true, maxAge: Session.maxAgeMs / 1000 
       }));
+      console.log("[AUTH] STEP 9: Cookie set. Done.");
+
       return { success: true, role: user.role };
     }),
+
     logout: authedQuery.mutation(({ ctx }) => {
       ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, "", { path: "/", maxAge: 0 }));
       return { success: true };
