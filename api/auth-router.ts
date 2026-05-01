@@ -7,6 +7,7 @@ import { getSessionCookieOptions } from "./lib/cookies";
 import { createRouter, publicQuery, authedQuery } from "./middleware";
 import { findUserByEmail, createUser } from "./queries/users";
 import { signSessionToken } from "./lib/session";
+import { env } from "./lib/env";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -24,6 +25,15 @@ export const authRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Safety check for critical env variables
+      if (!env.jwtSecret) {
+        console.error("CRITICAL ERROR: JWT_SECRET is missing from environment variables.");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Server configuration error. Please check environment variables.",
+        });
+      }
+
       const existing = await findUserByEmail(input.email);
       if (existing) {
         throw new TRPCError({
@@ -33,7 +43,7 @@ export const authRouter = createRouter({
       }
 
       const hashed = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
-      const isAdminEmail = input.email.toLowerCase() === (process.env.ADMIN_EMAIL || "").toLowerCase();
+      const isAdminEmail = input.email.toLowerCase() === env.adminEmail;
       
       const user = await createUser({
         email: input.email,
@@ -69,6 +79,15 @@ export const authRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Safety check for critical env variables
+      if (!env.jwtSecret) {
+        console.error("CRITICAL ERROR: JWT_SECRET is missing from environment variables.");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Server configuration error. Please check environment variables.",
+        });
+      }
+
       const user = await findUserByEmail(input.email);
       if (!user) {
         throw new TRPCError({

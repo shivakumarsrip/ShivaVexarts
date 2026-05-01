@@ -1,6 +1,5 @@
-import "dotenv/config";
-
 // Simple and direct environment variable access for Vercel/Node.js/Local
+// Removed dotenv/config as it is not needed and can cause issues in Vercel production
 export const env = {
   get jwtSecret() {
     return process.env.JWT_SECRET || "";
