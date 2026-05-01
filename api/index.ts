@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { handle } from "hono/vercel";
+import { handle } from "@hono/node-server/vercel";
 import { bodyLimit } from "hono/body-limit";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { initTRPC, TRPCError } from "@trpc/server";
@@ -93,6 +93,7 @@ import { z } from "zod";
 const app = new Hono();
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
+app.get("/api/health-hono", (c) => c.json({ status: "ok", type: "hono-monolithic" }));
 app.get("/api/health", (c) => c.json({ status: "ok", monolithic: true }));
 
 app.all("/api/trpc/*", async (c) => {
