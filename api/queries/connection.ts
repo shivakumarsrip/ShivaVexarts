@@ -1,13 +1,15 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { env } from "../lib/env";
 import * as schema from "../../db/schema.js";
 import * as relations from "../../db/relations.js";
 
 
 const fullSchema = { ...schema, ...relations };
+type Db = NeonHttpDatabase<typeof fullSchema>;
 
-let instance: any = null;
+let instance: Db | null = null;
 
 export function getDb() {
   if (!instance) {

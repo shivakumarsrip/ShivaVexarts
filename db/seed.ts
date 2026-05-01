@@ -1,8 +1,11 @@
-import { getDb } from "../api/queries/connection";
-import { artworks } from "./schema";
+import { getDb } from "../api/queries/connection.js";
+import { env } from "../api/lib/env.js";
+import { artworks } from "./schema.js";
 import { eq } from "drizzle-orm";
 
-const BLOB_BASE_URL = "https://ucr5bvewbolhssax.public.blob.vercel-storage.com";
+const assetBaseUrl = env.publicAssetBaseUrl.replace(/\/$/, "");
+const assetUrl = (fileName: string) =>
+  assetBaseUrl ? `${assetBaseUrl}/${fileName}` : `/${fileName}`;
 
 async function seed() {
   const db = getDb();
@@ -21,7 +24,7 @@ async function seed() {
       category: "Drama",
       collection: "movie_posters" as const,
       description: "Official movie poster for the Telugu crime thriller 'Maharaja'. Gritty textured portrait with blood splatters and dark sepia tones, capturing the intensity of the narrative.",
-      image: `${BLOB_BASE_URL}/artwork-maharaja.jpg`,
+      image: assetUrl("artwork-maharaja.jpg"),
       basePrice: 2500,
       year: 2024,
       dimensions: "420 x 594mm",
@@ -34,7 +37,7 @@ async function seed() {
       category: "Action",
       collection: "movie_posters" as const,
       description: "Action movie poster featuring a superhero silhouette with comic book collage elements. Fiery orange and red sky with bold golden 3D typography.",
-      image: `${BLOB_BASE_URL}/artwork-maaveeran.jpg`,
+      image: assetUrl("artwork-maaveeran.jpg"),
       basePrice: 2500,
       year: 2024,
       dimensions: "420 x 594mm",
@@ -47,7 +50,7 @@ async function seed() {
       category: "Action",
       collection: "movie_posters" as const,
       description: "Minimalist movie title card with glitch distortion and grain texture. Data corruption aesthetic on pure black background.",
-      image: `${BLOB_BASE_URL}/artwork-black.jpg`,
+      image: assetUrl("artwork-black.jpg"),
       basePrice: 1800,
       year: 2024,
       dimensions: "420 x 594mm",
@@ -60,7 +63,7 @@ async function seed() {
       category: "Cultural",
       collection: "digital_illustrations" as const,
       description: "Indie movie poster with warm earthy tones and South Indian rural aesthetic. Hand-drawn style title with artistic emotional mood.",
-      image: `${BLOB_BASE_URL}/artwork-bottle-radha.jpg`,
+      image: assetUrl("artwork-bottle-radha.jpg"),
       basePrice: 2200,
       year: 2024,
       dimensions: "420 x 594mm",
@@ -73,7 +76,7 @@ async function seed() {
       category: "Action",
       collection: "movie_posters" as const,
       description: "Action blockbuster poster with dynamic composition, explosive energy, and bold cinematic typography.",
-      image: `${BLOB_BASE_URL}/artwork-maaveeran.jpg`,
+      image: assetUrl("artwork-maaveeran.jpg"),
       basePrice: 2500,
       year: 2023,
       dimensions: "420 x 594mm",
@@ -86,7 +89,7 @@ async function seed() {
       category: "Drama",
       collection: "movie_posters" as const,
       description: "Intimate character drama poster with emotional close-up portrait, soft warm lighting, and elegant serif typography.",
-      image: `${BLOB_BASE_URL}/artwork-farhana.jpg`,
+      image: assetUrl("artwork-farhana.jpg"),
       basePrice: 2200,
       year: 2023,
       dimensions: "420 x 594mm",
@@ -99,7 +102,7 @@ async function seed() {
       category: "Horror",
       collection: "movie_posters" as const,
       description: "Horror movie teaser poster with dark silhouette against a blood-red moon. Gothic architecture and flying crows create a terrifying atmosphere.",
-      image: `${BLOB_BASE_URL}/artwork-asvins.jpg`,
+      image: assetUrl("artwork-asvins.jpg"),
       basePrice: 2000,
       year: 2023,
       dimensions: "420 x 594mm",
@@ -112,7 +115,7 @@ async function seed() {
       category: "LGBTQ+",
       collection: "social_awareness" as const,
       description: "Feel-good drama poster with vibrant rainbow over rural Telangana landscape. Golden hour lighting and uplifting composition.",
-      image: `${BLOB_BASE_URL}/artwork-rainbow.jpg`,
+      image: assetUrl("artwork-rainbow.jpg"),
       basePrice: 1800,
       year: 2023,
       dimensions: "420 x 594mm",
@@ -125,7 +128,7 @@ async function seed() {
       category: "Peace",
       collection: "social_awareness" as const,
       description: "Powerful anti-war poster with bold typography, falling missile imagery, and blood splatter effects. A call for peace and humanity.",
-      image: `${BLOB_BASE_URL}/artwork-stop-war.jpg`,
+      image: assetUrl("artwork-stop-war.jpg"),
       basePrice: 1500,
       year: 2023,
       dimensions: "297 x 420mm",
@@ -138,7 +141,7 @@ async function seed() {
       category: "Women",
       collection: "social_awareness" as const,
       description: "Women's empowerment poster featuring a silhouette with multiple arms holding symbols of strength, wisdom, justice, and voice.",
-      image: `${BLOB_BASE_URL}/artwork-womens-day.jpg`,
+      image: assetUrl("artwork-womens-day.jpg"),
       basePrice: 1500,
       year: 2024,
       dimensions: "297 x 420mm",
@@ -151,7 +154,7 @@ async function seed() {
       category: "Rights",
       collection: "social_awareness" as const,
       description: "Education advocacy poster showing a child reading a glowing book. Magical atmosphere with floating letters and symbols.",
-      image: `${BLOB_BASE_URL}/artwork-education.jpg`,
+      image: assetUrl("artwork-education.jpg"),
       basePrice: 1200,
       year: 2024,
       dimensions: "297 x 420mm",
@@ -164,7 +167,7 @@ async function seed() {
       category: "Equality",
       collection: "social_awareness" as const,
       description: "Social justice poster about ending caste discrimination. Powerful imagery of hands breaking chains with dramatic spotlight.",
-      image: `${BLOB_BASE_URL}/artwork-caste.jpg`,
+      image: assetUrl("artwork-caste.jpg"),
       basePrice: 1500,
       year: 2023,
       dimensions: "297 x 420mm",
@@ -177,7 +180,7 @@ async function seed() {
       category: "Science",
       collection: "social_awareness" as const,
       description: "Commemorative poster celebrating India's Chandrayaan-3 moon landing. Indian flag on the lunar surface with Earth in the background.",
-      image: `${BLOB_BASE_URL}/artwork-chandrayaan.jpg`,
+      image: assetUrl("artwork-chandrayaan.jpg"),
       basePrice: 2000,
       year: 2023,
       dimensions: "420 x 594mm",
@@ -190,7 +193,7 @@ async function seed() {
       category: "Portrait",
       collection: "digital_illustrations" as const,
       description: "Tribute portrait illustration of a legendary female singer. Stylized digital painting with warm amber tones and floating musical notes.",
-      image: `${BLOB_BASE_URL}/artwork-bhavatharini.jpg`,
+      image: assetUrl("artwork-bhavatharini.jpg"),
       basePrice: 1800,
       year: 2024,
       dimensions: "420 x 594mm",

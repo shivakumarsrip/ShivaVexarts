@@ -1,48 +1,64 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { trpcServer } from "@hono/trpc-server";
-import { appRouter } from "./router";
-import { authenticateRequest } from "./lib/session.js";
 import { put } from "@vercel/blob";
+import { trpcServer } from "@hono/trpc-server";
+import { appRouter } from "./router.js";
+import { env } from "./lib/env.js";
+import { authenticateRequest } from "./lib/session.js";
 
 const app = new Hono();
 
-// Apply body limit to all routes
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-// ── Stable Health Check ─────────────────────────────────────────────────────
 app.get("/api/health", (c) => {
   return c.json({
     status: "ok",
-    message: "Hono is healthy",
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    env: env.isProduction ? "production" : "development",
+    timestamp: new Date().toISOString(),
   });
 });
 
-// ── Image Upload (Vercel Blob) ───────────────────────────────────────────────
+app.get("/api/config-check", (c) => {
+  return c.json({
+    database: Boolean(env.databaseUrl),
+    jwt: Boolean(env.jwtSecret),
+    blobStorage: Boolean(env.blobReadWriteToken),
+    assetBaseUrl: env.publicAssetBaseUrl || "static-public-assets",
+  });
+});
+
 app.post("/api/upload", async (c) => {
   try {
+    const user = await authenticateRequest(c.req.raw.headers);
+    if (user.role !== "admin") {
+      return c.json({ error: "Only admins can upload artwork images" }, 403);
+    }
+
+    if (!env.blobReadWriteToken) {
+      return c.json({ error: "Blob storage is not configured" }, 500);
+    }
+
     const formData = await c.req.formData();
-    const file = formData.get("file") as File;
-    
-    if (!file) {
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
       return c.json({ error: "No file uploaded" }, 400);
     }
 
-    const blob = await put(file.name, file, {
-      access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const blob = await put(`artworks/${Date.now()}-${safeName}`, file, {
+      access: "public",
+      token: env.blobReadWriteToken,
     });
 
     return c.json(blob);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload failed";
     console.error("Upload error:", error);
-    return c.json({ error: error.message || "Upload failed" }, 500);
+    return c.json({ error: message }, 500);
   }
 });
 
-// ── TRPC Adapter ─────────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c, next) => {
   let user = null;
   try {
@@ -55,40 +71,15 @@ app.use("/api/trpc/*", async (c, next) => {
   return trpcServer({
     endpoint: "/api/trpc",
     router: appRouter,
-    createContext: (_opts, honoCtx) => ({
+    createContext: (opts, honoCtx) => ({
       user,
       req: honoCtx.req.raw,
-      resHeaders: _opts.resHeaders,
+      resHeaders: opts.resHeaders,
       honoCtx,
     }),
   })(c, next);
 });
 
-// ── Debug Auth Endpoint ──────────────────────────────────────────────────────
-app.get("/api/debug-auth", async (c) => {
-  const { getDb } = await import("./queries/connection");
-  const { env } = await import("./lib/env");
-  
-  try {
-    const db = getDb();
-    const result = await db.execute("SELECT 1 as connected");
-    return c.json({
-      db_connected: true,
-      jwt_secret_present: !!env.jwtSecret,
-      env_keys: Object.keys(process.env).filter(k => k.includes("URL") || k.includes("TOKEN")),
-      db_test: result
-    });
-  } catch (err: any) {
-    return c.json({
-      db_connected: false,
-      error: err.message,
-      stack: err.stack
-    }, 500);
-  }
-});
-
-// ── Fallback ─────────────────────────────────────────────────────────────────
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
-
 
 export default app;

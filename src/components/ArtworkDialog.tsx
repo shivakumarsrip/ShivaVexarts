@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Artwork } from "@db/schema";
 import { calculatePrice, useCartStore } from "@/store/cart";
@@ -16,16 +16,16 @@ const sizes = ["A4 Print", "A3 Print", "A2 Print", "Digital Download"];
 export default function ArtworkDialog({ artwork, open, onClose }: ArtworkDialogProps) {
   const [selectedSize, setSelectedSize] = useState("A4 Print");
   const [added, setAdded] = useState(false);
-  const [imageSrc, setImageSrc] = useState(artwork?.image ?? "");
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const { addItem } = useCartStore();
-
-  useEffect(() => {
-    setImageSrc(artwork?.image ?? "");
-  }, [artwork?.image]);
 
   if (!artwork) return null;
 
   const price = calculatePrice(artwork.basePrice, selectedSize);
+  const imageSrc =
+    failedImage === artwork.image
+      ? getArtworkImageFallback(artwork.image)
+      : artwork.image;
 
   const handleAddToCart = () => {
     addItem({
@@ -53,11 +53,10 @@ export default function ArtworkDialog({ artwork, open, onClose }: ArtworkDialogP
         {/* Image */}
         <div className="w-full h-[400px] md:h-[500px]">
           <img
-            src={imageSrc || artwork.image}
+            src={imageSrc}
             alt={artwork.title}
             onError={() => {
-              const fallback = getArtworkImageFallback(artwork.image);
-              if (imageSrc !== fallback) setImageSrc(fallback);
+              setFailedImage(artwork.image);
             }}
             className="w-full h-full object-cover rounded-t-2xl"
           />

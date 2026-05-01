@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# Shiva Vexarts App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Full-stack artwork storefront built with React, Vite, Hono, tRPC, Drizzle ORM, Neon Postgres, and Vercel Blob.
 
-Currently, two official plugins are available:
+## Project Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+api/          Hono backend, tRPC routers, auth/session helpers, server entrypoints
+contracts/    Shared constants, errors, and exported schema types
+db/           Drizzle schema, relations placeholder, and seed script
+public/       Static fallback artwork and hero assets
+src/          React frontend, UI components, pages, sections, cart store
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Environment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Copy the example file for local development:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.local.example .env.local
+```
+
+Required variables:
+
+```text
+DATABASE_URL
+JWT_SECRET
+ADMIN_EMAIL
+BLOB_READ_WRITE_TOKEN
+PUBLIC_ASSET_BASE_URL
+VITE_PUBLIC_ASSET_BASE_URL
+```
+
+`PUBLIC_ASSET_BASE_URL` and `VITE_PUBLIC_ASSET_BASE_URL` may be left empty to use static files from `public/`.
+
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+Useful database commands:
+
+```bash
+npm run db:push
+npm run db:seed
+```
+
+## Production Build
+
+```bash
+npm run check
+npm run lint
+npm run build
+npm start
+```
+
+`npm run build` emits both the Vite frontend and a standalone Node server at `dist/server.js`.
+
+## Vercel Deployment
+
+Set these environment variables in the Vercel project dashboard:
+
+```text
+DATABASE_URL
+JWT_SECRET
+ADMIN_EMAIL
+BLOB_READ_WRITE_TOKEN
+PUBLIC_ASSET_BASE_URL
+VITE_PUBLIC_ASSET_BASE_URL
+```
+
+Vercel uses `api/index.ts` as the serverless adapter, which imports the same Hono app used locally. The rewrite in `vercel.json` sends `/api/*` requests to that adapter and all other routes to the SPA.
+
+After deployment, verify:
+
+```text
+/api/health
+/api/config-check
 ```

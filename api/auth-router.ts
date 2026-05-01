@@ -2,6 +2,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { setCookie, deleteCookie } from "hono/cookie";
 import * as cookie from "cookie";
+import type { Context } from "hono";
 import { TRPCError } from "@trpc/server";
 import { Session } from "../contracts/constants.js";
 import { getSessionCookieOptions } from "./lib/cookies.js";
@@ -17,7 +18,7 @@ function isBcryptHash(password: string) {
   return /^\$2[aby]\$\d{2}\$/.test(password);
 }
 
-function setSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: any }, token: string) {
+function setSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: Context }, token: string) {
   const cookieOpts = getSessionCookieOptions(ctx.req.headers);
   const options = {
     httpOnly: cookieOpts.httpOnly,
@@ -31,7 +32,7 @@ function setSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: a
   if (ctx.honoCtx) setCookie(ctx.honoCtx, Session.cookieName, token, options);
 }
 
-function clearSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: any }) {
+function clearSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: Context }) {
   const opts = getSessionCookieOptions(ctx.req.headers);
   const options = {
     path: opts.path,
@@ -51,7 +52,8 @@ function clearSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?:
 }
 
 function toPublicUser<T extends { password: string }>(user: T) {
-  const { password: _password, ...publicUser } = user;
+  const { password, ...publicUser } = user;
+  void password;
   return publicUser;
 }
 

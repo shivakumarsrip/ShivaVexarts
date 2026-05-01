@@ -10,18 +10,31 @@ export const trpc = createTRPCReact<AppRouter>();
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error: any) => {
-        if (error?.data?.httpStatus === 401) return false;
+      retry: (failureCount, error: unknown) => {
+        if (isUnauthorizedTrpcError(error)) return false;
         return failureCount < 3;
       },
     },
   },
 });
+
+function isUnauthorizedTrpcError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof error.data === "object" &&
+    error.data !== null &&
+    "httpStatus" in error.data &&
+    error.data.httpStatus === 401
+  );
+}
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      methodOverride: "POST",
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

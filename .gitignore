@@ -25,7 +25,11 @@ dist-ssr
 # Environment variables
 .env
 .env.local
+.env.production
 .env.*.local
+# Example env files (contain real credentials)
+.env.local.example
+.env.production.example
 # Database
 *.db
 *.sqlite

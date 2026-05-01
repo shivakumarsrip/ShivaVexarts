@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Palette, Monitor, Clapperboard } from "lucide-react";
+import { assetUrl } from "@/lib/assets";
 
 const experiences = [
   {
@@ -73,7 +74,7 @@ export default function AboutSection() {
           <div className="lg:col-span-2">
             <div className="relative">
               <img
-                src="https://ucr5bvewbolhssax.public.blob.vercel-storage.com/Shiva.jpg"
+                src={assetUrl("hero-portrait.jpg")}
                 alt="Shivakumar S - Digital Artist"
                 className="w-full max-w-[400px] mx-auto rounded-2xl object-cover border border-[rgba(245,158,11,0.15)]"
                 style={{ aspectRatio: "3/4" }}

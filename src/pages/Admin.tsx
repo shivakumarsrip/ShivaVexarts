@@ -34,14 +34,15 @@ import { Loader2, Shield, ShoppingBag, MessageSquare, ArrowLeft, Image as ImageI
 import type { Artwork, Contact, Order } from "@db/schema";
 import { getArtworkImageFallback } from "@/lib/artwork-images";
 
-const statusColors: Record<string, string> = {
+const statusColors = {
   pending: "bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/20",
   paid: "bg-[#16A34A]/15 text-[#16A34A] border border-[#16A34A]/20",
   processing: "bg-blue-500/15 text-blue-400 border border-blue-500/20",
   shipped: "bg-purple-500/15 text-purple-400 border border-purple-500/20",
   delivered: "bg-gray-500/15 text-gray-400 border border-gray-500/20",
   cancelled: "bg-[#DC2626]/15 text-[#DC2626] border border-[#DC2626]/20",
-};
+} as const;
+type OrderStatus = keyof typeof statusColors;
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -473,7 +474,7 @@ export default function Admin() {
                           <TableCell className="text-right pr-8">
                             <Select 
                               defaultValue={order.status} 
-                              onValueChange={(val) => updateStatus.mutate({ orderId: order.orderId, status: val as any })}
+                              onValueChange={(val) => updateStatus.mutate({ orderId: order.orderId, status: val as OrderStatus })}
                             >
                               <SelectTrigger className="w-[140px] h-10 bg-[#09090B] border-[#27272A] text-white rounded-xl focus:ring-[#F59E0B]/20 ml-auto">
                                 <SelectValue />
@@ -599,7 +600,7 @@ export default function Admin() {
                   ) : (
                     <Select 
                       value={editForm.collection} 
-                      onValueChange={(val) => setEditForm({ ...editForm, collection: val as any })}
+                      onValueChange={(val) => setEditForm({ ...editForm, collection: val })}
                     >
                       <SelectTrigger className="h-12 bg-[#09090B] border-[#27272A] text-white rounded-xl focus:ring-[#F59E0B]/20">
                         <SelectValue placeholder="Select collection" />

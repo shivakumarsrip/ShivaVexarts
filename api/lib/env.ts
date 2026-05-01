@@ -1,7 +1,10 @@
-import "dotenv/config";
+import { config } from "dotenv";
 
-// Simple and direct environment variable access for Vercel/Node.js/Local
-// dotenv is loaded for local development; production still uses real env vars.
+const mode = process.env.NODE_ENV === "production" ? "production" : "local";
+
+config({ path: `.env.${mode}` });
+config({ path: ".env" });
+
 export const env = {
   get jwtSecret() {
     return process.env.JWT_SECRET || "";
@@ -14,5 +17,11 @@ export const env = {
   },
   get databaseUrl() {
     return process.env.DATABASE_URL || "";
+  },
+  get blobReadWriteToken() {
+    return process.env.BLOB_READ_WRITE_TOKEN || "";
+  },
+  get publicAssetBaseUrl() {
+    return process.env.PUBLIC_ASSET_BASE_URL || process.env.VITE_BLOB_BASE_URL || "";
   },
 };
