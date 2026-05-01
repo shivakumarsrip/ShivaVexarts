@@ -1,7 +1,7 @@
-import { authRouter } from "./auth-router.js";
-import { artworkRouter } from "./artwork-router.js";
-import { orderRouter } from "./order-router.js";
-import { contactRouter } from "./contact-router.js";
+import { authRouter } from "./auth-router";
+import { artworkRouter } from "./artwork-router";
+import { orderRouter } from "./order-router";
+import { contactRouter } from "./contact-router";
 import { createRouter, publicQuery } from "./middleware.js";
 
 
