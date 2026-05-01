@@ -1,9 +1,9 @@
 import { handle } from "hono/vercel";
 import app from "./boot";
 
-// Use standard Node.js runtime instead of Edge to support all libraries
+// Vercel standard Node.js runtime
 export const config = {
-  runtime: "nodejs20.x",
+  runtime: "nodejs",
 };
 
 export default handle(app);
