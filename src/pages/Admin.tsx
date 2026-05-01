@@ -31,7 +31,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Shield, ShoppingBag, MessageSquare, ArrowLeft, Image as ImageIcon, Edit2, LayoutDashboard, Plus, Upload, X, CheckCircle2, LayoutGrid, List, Search } from "lucide-react";
-import type { Artwork } from "@db/schema";
+import type { Artwork, Contact, Order } from "@db/schema";
+import { getArtworkImageFallback } from "@/lib/artwork-images";
 
 const statusColors: Record<string, string> = {
   pending: "bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/20",
@@ -85,7 +86,7 @@ export default function Admin() {
     if (!allArtworks) return [];
     if (!searchQuery) return allArtworks;
     const q = searchQuery.toLowerCase();
-    return allArtworks.filter(a => 
+    return allArtworks.filter((a: Artwork) => 
       a.title.toLowerCase().includes(q) || 
       a.collection.toLowerCase().includes(q) || 
       a.category.toLowerCase().includes(q)
@@ -96,7 +97,7 @@ export default function Admin() {
     if (!allOrders) return [];
     if (!searchQuery) return allOrders;
     const q = searchQuery.toLowerCase();
-    return allOrders.filter(o => 
+    return allOrders.filter((o: Order) => 
       o.customerName.toLowerCase().includes(q) || 
       o.customerEmail.toLowerCase().includes(q) || 
       o.orderId.toLowerCase().includes(q)
@@ -107,7 +108,7 @@ export default function Admin() {
     if (!allContacts) return [];
     if (!searchQuery) return allContacts;
     const q = searchQuery.toLowerCase();
-    return allContacts.filter(c => 
+    return allContacts.filter((c: Contact) => 
       c.name.toLowerCase().includes(q) || 
       c.email.toLowerCase().includes(q) || 
       c.subject.toLowerCase().includes(q) || 
@@ -115,7 +116,9 @@ export default function Admin() {
     );
   }, [allContacts, searchQuery]);
 
-  const existingCollections = Array.from(new Set(allArtworks?.map(a => a.collection) || []));
+  const existingCollections: string[] = Array.from(
+    new Set<string>(allArtworks?.map((a: Artwork) => a.collection) || []),
+  );
 
   const createArtwork = trpc.artwork.create.useMutation({
     onSuccess: () => {
@@ -324,11 +327,18 @@ export default function Admin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredArtworks?.map((artwork) => (
+                      {filteredArtworks?.map((artwork: Artwork) => (
                         <TableRow key={artwork.id} className="border-[#27272A] hover:bg-[#27272A]/40 transition-colors h-20 group">
                           <TableCell className="pl-8">
                             <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/5 group-hover:border-[#F59E0B]/30 transition-colors">
-                              <img src={artwork.image} className="w-full h-full object-cover" alt="" />
+                              <img
+                                src={artwork.image}
+                                className="w-full h-full object-cover"
+                                alt=""
+                                onError={(event) => {
+                                  event.currentTarget.src = getArtworkImageFallback(artwork.image);
+                                }}
+                              />
                             </div>
                           </TableCell>
                           <TableCell className="font-body text-[14px] text-white font-bold">{artwork.title}</TableCell>
@@ -360,7 +370,7 @@ export default function Admin() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {filteredArtworks?.map((artwork) => (
+                {filteredArtworks?.map((artwork: Artwork) => (
                   <div 
                     key={artwork.id} 
                     className="group bg-[#18181B] border border-[#27272A] rounded-3xl overflow-hidden hover:border-[#F59E0B] transition-all duration-500 shadow-xl hover:shadow-[0_20px_50px_rgba(245,158,11,0.15)] hover:-translate-y-2 flex flex-col"
@@ -371,6 +381,9 @@ export default function Admin() {
                         src={artwork.image} 
                         className="w-full h-full object-cover scale-[1.02] transition-transform duration-700 ease-out group-hover:scale-110 will-change-transform transform-gpu" 
                         alt={artwork.title} 
+                        onError={(event) => {
+                          event.currentTarget.src = getArtworkImageFallback(artwork.image);
+                        }}
                       />
                       
                       {/* Full coverage gradient overlay */}
@@ -460,7 +473,7 @@ export default function Admin() {
                           <TableCell className="text-right pr-8">
                             <Select 
                               defaultValue={order.status} 
-                              onValueChange={(val) => updateStatus.mutate({ id: order.id, status: val as any })}
+                              onValueChange={(val) => updateStatus.mutate({ orderId: order.orderId, status: val as any })}
                             >
                               <SelectTrigger className="w-[140px] h-10 bg-[#09090B] border-[#27272A] text-white rounded-xl focus:ring-[#F59E0B]/20 ml-auto">
                                 <SelectValue />
@@ -505,7 +518,7 @@ export default function Admin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredContacts?.map((contact) => (
+                      {filteredContacts?.map((contact: Contact) => (
                         <TableRow key={contact.id} className="border-[#27272A] hover:bg-[#27272A]/40 transition-colors align-top">
                           <TableCell className="pl-8 py-6 text-[#71717A] text-[12px] font-mono">
                             {new Date(contact.createdAt).toLocaleDateString()}

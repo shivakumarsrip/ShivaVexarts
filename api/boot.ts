@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "./router";
-import { createContext } from "./context";
+import { authenticateRequest } from "./lib/session.js";
 import { put } from "@vercel/blob";
 
 const app = new Hono();
@@ -43,22 +43,25 @@ app.post("/api/upload", async (c) => {
 });
 
 // ── TRPC Adapter ─────────────────────────────────────────────────────────────
-app.use("/api/trpc/*", async (c) => {
+app.use("/api/trpc/*", async (c, next) => {
+  let user = null;
   try {
-    return await fetchRequestHandler({
-      endpoint: "/api/trpc",
-      req: c.req.raw,
-      router: appRouter,
-      createContext,
-    });
-  } catch (err: any) {
-    console.error("TRPC Adapter Crash:", err);
-    return c.json({ 
-      error: "TRPC Adapter Error", 
-      message: err.message,
-      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
-    }, 500);
+    user = await authenticateRequest(c.req.raw.headers);
+  } catch {
+    // Public tRPC procedures, including login and gallery reads, must still run
+    // when the request has no valid session cookie.
   }
+
+  return trpcServer({
+    endpoint: "/api/trpc",
+    router: appRouter,
+    createContext: (_opts, honoCtx) => ({
+      user,
+      req: honoCtx.req.raw,
+      resHeaders: _opts.resHeaders,
+      honoCtx,
+    }),
+  })(c, next);
 });
 
 // ── Debug Auth Endpoint ──────────────────────────────────────────────────────

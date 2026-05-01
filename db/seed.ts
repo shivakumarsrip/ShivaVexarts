@@ -1,5 +1,6 @@
 import { getDb } from "../api/queries/connection";
 import { artworks } from "./schema";
+import { eq } from "drizzle-orm";
 
 const BLOB_BASE_URL = "https://ucr5bvewbolhssax.public.blob.vercel-storage.com";
 

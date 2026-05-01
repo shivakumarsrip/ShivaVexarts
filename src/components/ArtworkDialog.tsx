@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Artwork } from "@db/schema";
 import { calculatePrice, useCartStore } from "@/store/cart";
 import { X, ShoppingCart, Check } from "lucide-react";
+import { getArtworkImageFallback } from "@/lib/artwork-images";
 
 interface ArtworkDialogProps {
   artwork: Artwork | null;
@@ -15,7 +16,12 @@ const sizes = ["A4 Print", "A3 Print", "A2 Print", "Digital Download"];
 export default function ArtworkDialog({ artwork, open, onClose }: ArtworkDialogProps) {
   const [selectedSize, setSelectedSize] = useState("A4 Print");
   const [added, setAdded] = useState(false);
+  const [imageSrc, setImageSrc] = useState(artwork?.image ?? "");
   const { addItem } = useCartStore();
+
+  useEffect(() => {
+    setImageSrc(artwork?.image ?? "");
+  }, [artwork?.image]);
 
   if (!artwork) return null;
 
@@ -47,8 +53,12 @@ export default function ArtworkDialog({ artwork, open, onClose }: ArtworkDialogP
         {/* Image */}
         <div className="w-full h-[400px] md:h-[500px]">
           <img
-            src={artwork.image}
+            src={imageSrc || artwork.image}
             alt={artwork.title}
+            onError={() => {
+              const fallback = getArtworkImageFallback(artwork.image);
+              if (imageSrc !== fallback) setImageSrc(fallback);
+            }}
             className="w-full h-full object-cover rounded-t-2xl"
           />
         </div>

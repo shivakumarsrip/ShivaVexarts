@@ -4,7 +4,8 @@ import { authenticateRequest } from "./lib/session.js";
 
 export type TrpcContext = {
   req: Request;
-  resHeaders: Headers;
+  resHeaders?: Headers;
+  honoCtx?: any;
   user?: User;
 };
 

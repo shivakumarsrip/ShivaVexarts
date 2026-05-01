@@ -96,7 +96,7 @@ function GalleryChapter({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-          {artworks?.map((artwork) => (
+          {artworks?.map((artwork: Artwork) => (
             <ArtworkCard key={artwork.id} artwork={artwork} />
           ))}
         </div>
@@ -113,7 +113,7 @@ export default function GallerySection() {
 
     // Group artworks by collection
     const groups: Record<string, Artwork[]> = {};
-    allArtworks.forEach(art => {
+    allArtworks.forEach((art: Artwork) => {
       if (!groups[art.collection]) groups[art.collection] = [];
       groups[art.collection].push(art);
     });

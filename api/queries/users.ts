@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.js";
 import { getDb } from "./connection.js";
-import { env } from "../lib/env.js";
 
 
 export async function findUserByEmail(email: string) {
@@ -22,13 +21,20 @@ export async function findUserById(id: number) {
   return rows[0];
 }
 
+export async function updateUserPassword(id: number, password: string) {
+  await getDb()
+    .update(schema.users)
+    .set({ password, updatedAt: new Date() })
+    .where(eq(schema.users.id, id));
+}
+
 export async function createUser(data: {
   email: string;
   password: string;
   name?: string;
+  role: "user" | "admin";
 }) {
   const email = data.email.toLowerCase();
-  const role = email === env.adminEmail && env.adminEmail !== "" ? "admin" : "user";
 
   await getDb()
     .insert(schema.users)
@@ -36,7 +42,7 @@ export async function createUser(data: {
       email,
       password: data.password,
       name: data.name,
-      role,
+      role: data.role,
     });
 
   // Return the newly created user

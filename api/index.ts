@@ -3,8 +3,9 @@ import { trpcServer } from "@hono/trpc-server";
 import { handle } from "@hono/node-server/vercel";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
-import * as bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import * as cookie from "cookie";
 import * as jose from "jose";
 import { z } from "zod";
 import { put } from "@vercel/blob";
@@ -24,6 +25,30 @@ const env = {
   get adminEmail() { return (process.env.ADMIN_EMAIL || "").toLowerCase(); },
   get blobToken() { return process.env.BLOB_READ_WRITE_TOKEN || ""; }
 };
+
+function getSessionCookieOptions(headers: Headers) {
+  const host = headers.get("host") || "";
+  const forwardedProto = headers.get("x-forwarded-proto") || "";
+  const isLocalhost = host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
+  const secure = !isLocalhost && forwardedProto !== "http";
+
+  return {
+    httpOnly: true,
+    path: "/",
+    sameSite: secure ? "None" as const : "Lax" as const,
+    secure,
+    maxAge: Session.maxAgeMs / 1000,
+  };
+}
+
+function isBcryptHash(password: string) {
+  return /^\$2[aby]\$\d{2}\$/.test(password);
+}
+
+function toPublicUser(user: any) {
+  const { password: _password, ...publicUser } = user;
+  return publicUser;
+}
 
 // ── 2. DATABASE CONNECTION ──────────────────────────────────────────────────
 let dbInstance: any = null;
@@ -59,7 +84,7 @@ async function authenticateRequest(c: any) {
 }
 
 // ── 4. TRPC SETUP ────────────────────────────────────────────────────────────
-const t = initTRPC.context<{ user?: any; req: Request; honoCtx: any }>().create({ transformer: superjson });
+const t = initTRPC.context<{ user?: any; req: Request; resHeaders?: Headers; honoCtx: any }>().create({ transformer: superjson });
 const publicQuery = t.procedure;
 const authedQuery = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: ErrorMessages.unauthenticated });
@@ -74,51 +99,74 @@ const appRouter = t.router({
   ping: publicQuery.query(() => ({ ok: true })),
   
   auth: t.router({
-    me: authedQuery.query((opts) => opts.ctx.user),
+    me: authedQuery.query((opts) => toPublicUser(opts.ctx.user)),
     login: publicQuery.input(z.object({ email: z.string().email(), password: z.string() })).mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const userRows = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
+      const email = input.email.trim().toLowerCase();
+      const userRows = await db.select().from(schema.users).where(eq(schema.users.email, email));
       const user = userRows[0];
       
       if (!user) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
 
-      const isMatch = await bcrypt.compare(input.password, user.password);
+      const isMatch = isBcryptHash(user.password)
+        ? await bcrypt.compare(input.password, user.password)
+        : input.password === user.password;
       if (!isMatch) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
 
+      if (!isBcryptHash(user.password)) {
+        await db
+          .update(schema.users)
+          .set({ password: await bcrypt.hash(input.password, 12), updatedAt: new Date() })
+          .where(eq(schema.users.id, user.id));
+      }
+
       const token = await signSessionToken({ userId: user.id, role: user.role });
       
-      setCookie(ctx.honoCtx, Session.cookieName, token, { 
-        httpOnly: true, path: "/", sameSite: "Lax", secure: true, maxAge: Session.maxAgeMs / 1000 
-      });
+      const cookieOptions = getSessionCookieOptions(ctx.req.headers);
+      ctx.resHeaders?.append(
+        "set-cookie",
+        cookie.serialize(Session.cookieName, token, {
+          ...cookieOptions,
+          sameSite: cookieOptions.sameSite.toLowerCase() as "lax" | "none",
+        }),
+      );
+      setCookie(ctx.honoCtx, Session.cookieName, token, cookieOptions);
       
       return { success: true, role: user.role };
     }),
     signup: publicQuery.input(z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().optional() })).mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
+      const email = input.email.trim().toLowerCase();
+      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, email));
       if (existingUser.length > 0) {
         throw new TRPCError({ code: "CONFLICT", message: "Email already exists" });
       }
       
       const hashedPassword = await bcrypt.hash(input.password, 10);
-      const role = input.email === env.adminEmail ? "admin" : "user";
+      const role = email === env.adminEmail ? "admin" : "user";
       
       const [newUser] = await db.insert(schema.users).values({
-        email: input.email,
+        email,
         password: hashedPassword,
-        name: input.name || input.email.split("@")[0],
+        name: input.name || email.split("@")[0],
         role: role,
       }).returning();
       
       const token = await signSessionToken({ userId: newUser.id, role: newUser.role });
       
-      setCookie(ctx.honoCtx, Session.cookieName, token, { 
-        httpOnly: true, path: "/", sameSite: "Lax", secure: true, maxAge: Session.maxAgeMs / 1000 
-      });
+      const cookieOptions = getSessionCookieOptions(ctx.req.headers);
+      ctx.resHeaders?.append(
+        "set-cookie",
+        cookie.serialize(Session.cookieName, token, {
+          ...cookieOptions,
+          sameSite: cookieOptions.sameSite.toLowerCase() as "lax" | "none",
+        }),
+      );
+      setCookie(ctx.honoCtx, Session.cookieName, token, cookieOptions);
       
       return { success: true, role: newUser.role };
     }),
@@ -196,6 +244,7 @@ app.use("/api/trpc/*", async (c, next) => {
     createContext: (_opts, honoCtx) => ({ 
       user, 
       req: honoCtx.req.raw, 
+      resHeaders: _opts.resHeaders,
       honoCtx
     }),
   })(c, next);

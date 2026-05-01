@@ -3,6 +3,7 @@ import type { Artwork } from "@db/schema";
 import { calculatePrice, useCartStore } from "@/store/cart";
 import { ShoppingCart, Check, Eye } from "lucide-react";
 import ArtworkDialog from "./ArtworkDialog";
+import { getArtworkImageFallback } from "@/lib/artwork-images";
 
 interface ArtworkCardProps {
   artwork: Artwork;
@@ -14,6 +15,7 @@ export default function ArtworkCard({ artwork, featured = false }: ArtworkCardPr
   const [added, setAdded] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageSrc, setImageSrc] = useState(artwork.image);
   const { addItem } = useCartStore();
 
   const defaultSize = "A4 Print";
@@ -22,7 +24,12 @@ export default function ArtworkCard({ artwork, featured = false }: ArtworkCardPr
   // Optimizing images for the grid view
   // Vercel Blob / standard images often benefit from a smaller version in the grid
   // We'll append a 'thumbnail' hint if possible, otherwise we rely on lazy loading
-  const thumbnailUrl = artwork.image; 
+  useEffect(() => {
+    setImageSrc(artwork.image);
+    setImageLoaded(false);
+  }, [artwork.image]);
+
+  const thumbnailUrl = imageSrc;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -61,6 +68,13 @@ export default function ArtworkCard({ artwork, featured = false }: ArtworkCardPr
             alt={artwork.title}
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              const fallback = getArtworkImageFallback(artwork.image);
+              if (imageSrc !== fallback) {
+                setImageSrc(fallback);
+                setImageLoaded(false);
+              }
+            }}
             className={`w-full h-full object-cover transition-all duration-700 ${
               imageLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-105 blur-lg"
             } group-hover:scale-105`}

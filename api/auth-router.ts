@@ -1,20 +1,63 @@
 import { z } from "zod";
-import * as bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
+import { setCookie, deleteCookie } from "hono/cookie";
 import * as cookie from "cookie";
 import { TRPCError } from "@trpc/server";
 import { Session } from "../contracts/constants.js";
 import { getSessionCookieOptions } from "./lib/cookies.js";
 import { createRouter, publicQuery, authedQuery } from "./middleware.js";
-import { findUserByEmail, createUser } from "./queries/users.js";
+import { findUserByEmail, createUser, updateUserPassword } from "./queries/users.js";
 import { signSessionToken } from "./lib/session.js";
 import { env } from "./lib/env.js";
 
 
 const BCRYPT_ROUNDS = 12;
 
+function isBcryptHash(password: string) {
+  return /^\$2[aby]\$\d{2}\$/.test(password);
+}
+
+function setSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: any }, token: string) {
+  const cookieOpts = getSessionCookieOptions(ctx.req.headers);
+  const options = {
+    httpOnly: cookieOpts.httpOnly,
+    path: cookieOpts.path,
+    sameSite: (cookieOpts.sameSite?.toLowerCase() ?? "lax") as "lax" | "none",
+    secure: cookieOpts.secure,
+    maxAge: Session.maxAgeMs / 1000,
+  };
+
+  ctx.resHeaders?.append("set-cookie", cookie.serialize(Session.cookieName, token, options));
+  if (ctx.honoCtx) setCookie(ctx.honoCtx, Session.cookieName, token, options);
+}
+
+function clearSessionCookie(ctx: { req: Request; resHeaders?: Headers; honoCtx?: any }) {
+  const opts = getSessionCookieOptions(ctx.req.headers);
+  const options = {
+    path: opts.path,
+    sameSite: opts.sameSite?.toLowerCase() as "lax" | "none",
+    secure: opts.secure,
+  };
+
+  ctx.resHeaders?.append(
+    "set-cookie",
+    cookie.serialize(Session.cookieName, "", {
+      ...options,
+      httpOnly: opts.httpOnly,
+      maxAge: 0,
+    }),
+  );
+  if (ctx.honoCtx) deleteCookie(ctx.honoCtx, Session.cookieName, options);
+}
+
+function toPublicUser<T extends { password: string }>(user: T) {
+  const { password: _password, ...publicUser } = user;
+  return publicUser;
+}
+
 export const authRouter = createRouter({
   // ── Who am I? ──────────────────────────────────────────────────
-  me: authedQuery.query((opts) => opts.ctx.user),
+  me: authedQuery.query((opts) => toPublicUser(opts.ctx.user)),
 
   // ── Sign up ────────────────────────────────────────────────────
   signup: publicQuery
@@ -35,7 +78,8 @@ export const authRouter = createRouter({
         });
       }
 
-      const existing = await findUserByEmail(input.email);
+      const email = input.email.trim().toLowerCase();
+      const existing = await findUserByEmail(email);
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
@@ -44,29 +88,19 @@ export const authRouter = createRouter({
       }
 
       const hashed = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
-      const isAdminEmail = input.email.toLowerCase() === env.adminEmail;
+      const isAdminEmail = email === env.adminEmail;
       
       const user = await createUser({
-        email: input.email,
+        email,
         password: hashed,
-        name: input.name,
+        name: input.name?.trim(),
         role: isAdminEmail ? "admin" : "user",
       });
 
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const token = await signSessionToken({ userId: user.id, role: user.role });
-      const cookieOpts = getSessionCookieOptions(ctx.req.headers);
-      ctx.resHeaders.append(
-        "set-cookie",
-        cookie.serialize(Session.cookieName, token, {
-          httpOnly: cookieOpts.httpOnly,
-          path: cookieOpts.path,
-          sameSite: (cookieOpts.sameSite?.toLowerCase() ?? "lax") as "lax" | "none",
-          secure: cookieOpts.secure,
-          maxAge: Session.maxAgeMs / 1000,
-        })
-      );
+      setSessionCookie(ctx, token);
 
       return { success: true, role: user.role };
     }),
@@ -80,7 +114,8 @@ export const authRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      console.log(`[AUTH] Login attempt for: ${input.email}`);
+      const email = input.email.trim().toLowerCase();
+      console.log(`[AUTH] Login attempt for: ${email}`);
 
       // Safety check for critical env variables
       if (!env.jwtSecret) {
@@ -91,53 +126,40 @@ export const authRouter = createRouter({
         });
       }
 
-      const user = await findUserByEmail(input.email);
+      const user = await findUserByEmail(email);
       if (!user) {
-        console.warn(`[AUTH] Login failed: User not found (${input.email})`);
+        console.warn(`[AUTH] Login failed: User not found (${email})`);
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password.",
         });
       }
 
-      const valid = await bcrypt.compare(input.password, user.password);
+      const valid = isBcryptHash(user.password)
+        ? await bcrypt.compare(input.password, user.password)
+        : input.password === user.password;
       if (!valid) {
-        console.warn(`[AUTH] Login failed: Invalid password for ${input.email}`);
+        console.warn(`[AUTH] Login failed: Invalid password for ${email}`);
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password.",
         });
+      }
+
+      if (!isBcryptHash(user.password)) {
+        const hashed = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+        await updateUserPassword(user.id, hashed);
       }
 
       const token = await signSessionToken({ userId: user.id, role: user.role });
-      const cookieOpts = getSessionCookieOptions(ctx.req.headers);
-      ctx.resHeaders.append(
-        "set-cookie",
-        cookie.serialize(Session.cookieName, token, {
-          httpOnly: cookieOpts.httpOnly,
-          path: cookieOpts.path,
-          sameSite: (cookieOpts.sameSite?.toLowerCase() ?? "lax") as "lax" | "none",
-          secure: cookieOpts.secure,
-          maxAge: Session.maxAgeMs / 1000,
-        })
-      );
+      setSessionCookie(ctx, token);
 
       return { success: true, role: user.role };
     }),
 
   // ── Log out ────────────────────────────────────────────────────
   logout: authedQuery.mutation(async ({ ctx }) => {
-    const opts = getSessionCookieOptions(ctx.req.headers);
-    ctx.resHeaders.append(
-      "set-cookie",
-      cookie.serialize(Session.cookieName, "", {
-        httpOnly: opts.httpOnly,
-        path: opts.path,
-        sameSite: opts.sameSite?.toLowerCase() as "lax" | "none",
-        secure: opts.secure,
-        maxAge: 0,
-      })
-    );
+    clearSessionCookie(ctx);
     return { success: true };
   }),
 });
