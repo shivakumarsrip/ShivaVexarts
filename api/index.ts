@@ -1,11 +1,10 @@
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
 import { handle } from "@hono/node-server/vercel";
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import * as bcrypt from "bcryptjs";
-import * as cookie from "cookie";
+import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import * as jose from "jose";
 import { z } from "zod";
 import { put } from "@vercel/blob";
@@ -47,9 +46,8 @@ async function signSessionToken(payload: any) {
     .sign(secret);
 }
 
-async function authenticateRequest(headers: Headers) {
-  const cookies = cookie.parse(headers.get("cookie") || "");
-  const token = cookies[Session.cookieName];
+async function authenticateRequest(c: any) {
+  const token = getCookie(c, Session.cookieName);
   if (!token) return null;
   try {
     const secret = new TextEncoder().encode(env.jwtSecret);
@@ -61,7 +59,7 @@ async function authenticateRequest(headers: Headers) {
 }
 
 // ── 4. TRPC SETUP ────────────────────────────────────────────────────────────
-const t = initTRPC.context<{ user?: any; req: Request; resHeaders: Headers }>().create({ transformer: superjson });
+const t = initTRPC.context<{ user?: any; req: Request; honoCtx: any }>().create({ transformer: superjson });
 const publicQuery = t.procedure;
 const authedQuery = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: ErrorMessages.unauthenticated });
@@ -78,43 +76,57 @@ const appRouter = t.router({
   auth: t.router({
     me: authedQuery.query((opts) => opts.ctx.user),
     login: publicQuery.input(z.object({ email: z.string().email(), password: z.string() })).mutation(async ({ input, ctx }) => {
-      console.log("[AUTH] STEP 1: Login started");
       const db = getDb();
-      console.log("[AUTH] STEP 2: DB Instance ready");
-      
       const userRows = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
-      console.log(`[AUTH] STEP 3: DB Query finished. Found ${userRows.length} users`);
-      
       const user = userRows[0];
+      
       if (!user) {
-        console.log("[AUTH] STEP 4: User not found");
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
 
-      console.log("[AUTH] STEP 5: Starting bcrypt.compare...");
       const isMatch = await bcrypt.compare(input.password, user.password);
-      console.log(`[AUTH] STEP 6: bcrypt finished. Match: ${isMatch}`);
-
       if (!isMatch) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
 
-      console.log("[AUTH] STEP 7: Starting JWT sign...");
       const token = await signSessionToken({ userId: user.id, role: user.role });
-      console.log("[AUTH] STEP 8: JWT signed");
-
-      ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, token, { 
-        httpOnly: true, path: "/", sameSite: "lax", secure: true, maxAge: Session.maxAgeMs / 1000 
-      }));
-      console.log("[AUTH] STEP 9: Cookie set. Done.");
-
+      
+      setCookie(ctx.honoCtx, Session.cookieName, token, { 
+        httpOnly: true, path: "/", sameSite: "Lax", secure: true, maxAge: Session.maxAgeMs / 1000 
+      });
+      
       return { success: true, role: user.role };
     }),
-
+    signup: publicQuery.input(z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().optional() })).mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
+      if (existingUser.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "Email already exists" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(input.password, 10);
+      const role = input.email === env.adminEmail ? "admin" : "user";
+      
+      const [newUser] = await db.insert(schema.users).values({
+        email: input.email,
+        password: hashedPassword,
+        name: input.name || input.email.split("@")[0],
+        role: role,
+      }).returning();
+      
+      const token = await signSessionToken({ userId: newUser.id, role: newUser.role });
+      
+      setCookie(ctx.honoCtx, Session.cookieName, token, { 
+        httpOnly: true, path: "/", sameSite: "Lax", secure: true, maxAge: Session.maxAgeMs / 1000 
+      });
+      
+      return { success: true, role: newUser.role };
+    }),
     logout: authedQuery.mutation(({ ctx }) => {
-      ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, "", { path: "/", maxAge: 0 }));
+      deleteCookie(ctx.honoCtx, Session.cookieName, { path: "/" });
       return { success: true };
     })
+
   }),
 
   artwork: t.router({
@@ -164,7 +176,6 @@ const app = new Hono();
 
 app.get("/api/health", (c) => c.json({ status: "ok", monolithic: "complete" }));
 
-
 app.post("/api/upload", async (c) => {
   try {
     const formData = await c.req.formData();
@@ -175,17 +186,16 @@ app.post("/api/upload", async (c) => {
 });
 
 app.use("/api/trpc/*", async (c, next) => {
-  const user = await authenticateRequest(c.req.raw.headers);
+  const user = await authenticateRequest(c);
   return trpcServer({
     endpoint: "/api/trpc",
     router: appRouter,
     createContext: (_opts, honoCtx) => ({ 
       user, 
       req: honoCtx.req.raw, 
-      resHeaders: honoCtx.res.headers 
+      honoCtx
     }),
   })(c, next);
 });
-
 
 export default handle(app);
