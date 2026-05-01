@@ -74,64 +74,60 @@ const adminQuery = authedQuery.use(async ({ ctx, next }) => {
 
 const appRouter = t.router({
   ping: publicQuery.query(() => ({ ok: true })),
+  
   auth: t.router({
     me: authedQuery.query((opts) => opts.ctx.user),
     login: publicQuery.input(z.object({ email: z.string().email(), password: z.string() })).mutation(async ({ input, ctx }) => {
-      console.log(`[AUTH] 1. Login attempt started for: ${input.email}`);
-      
-      console.log("[AUTH] 2. Initializing DB connection...");
       const db = getDb();
-      
-      console.log("[AUTH] 3. Searching for user in database...");
-      const users = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
-      const user = users[0];
-      
-      if (!user) {
-        console.warn("[AUTH] 4a. User not found");
+      const user = (await db.select().from(schema.users).where(eq(schema.users.email, input.email)))[0];
+      if (!user || !(await bcrypt.compare(input.password, user.password))) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
-      
-      console.log("[AUTH] 4b. User found. Comparing password hash...");
-      const isMatch = await bcrypt.compare(input.password, user.password);
-      
-      if (!isMatch) {
-        console.warn("[AUTH] 5a. Password mismatch");
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
-      }
-      
-      console.log("[AUTH] 5b. Password matched. Signing JWT...");
       const token = await signSessionToken({ userId: user.id, role: user.role });
-      
-      console.log("[AUTH] 6. Setting session cookie...");
       ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, token, { 
         httpOnly: true, path: "/", sameSite: "lax", secure: true, maxAge: Session.maxAgeMs / 1000 
       }));
-      
-      console.log("[AUTH] 7. Login successful!");
       return { success: true, role: user.role };
     }),
-
     logout: authedQuery.mutation(({ ctx }) => {
       ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, "", { path: "/", maxAge: 0 }));
       return { success: true };
     })
   }),
+
   artwork: t.router({
     list: publicQuery.input(z.object({ collection: z.string().optional(), category: z.string().nullish() }).optional())
       .query(async ({ input }) => {
         const db = getDb();
-        let q = db.select().from(schema.artworks);
         const conditions = [];
         if (input?.collection) conditions.push(eq(schema.artworks.collection, input.collection));
         if (input?.category && input.category !== "All") conditions.push(eq(schema.artworks.category, input.category));
-        if (conditions.length) return q.where(and(...conditions)).orderBy(asc(schema.artworks.id));
-        return q.orderBy(asc(schema.artworks.id));
+        if (conditions.length) return db.select().from(schema.artworks).where(and(...conditions)).orderBy(asc(schema.artworks.id));
+        return db.select().from(schema.artworks).orderBy(asc(schema.artworks.id));
       }),
+    listAll: publicQuery.query(async () => getDb().select().from(schema.artworks).orderBy(asc(schema.artworks.id))),
     getBySlug: publicQuery.input(z.object({ slug: z.string() })).query(async ({ input }) => {
       const results = await getDb().select().from(schema.artworks).where(eq(schema.artworks.slug, input.slug));
       return results[0] || null;
-    })
+    }),
+    featured: publicQuery.query(async () => getDb().select().from(schema.artworks).where(eq(schema.artworks.featured, 1))),
+    create: adminQuery.input(z.object({ title: z.string(), category: z.string(), collection: z.string(), description: z.string().optional(), image: z.string().url(), basePrice: z.number() }))
+      .mutation(async ({ input }) => {
+        const slug = input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now().toString().slice(-4);
+        return (await getDb().insert(schema.artworks).values({ ...input, slug }).returning())[0];
+      })
   }),
+
+  order: t.router({
+    create: publicQuery.input(z.object({ customerName: z.string(), customerEmail: z.string(), totalAmount: z.number(), items: z.array(z.any()) }))
+      .mutation(async ({ input }) => {
+        const orderId = "VEX-" + Date.now().toString(36).toUpperCase();
+        const [order] = await getDb().insert(schema.orders).values({ orderId, ...input, status: "pending" }).returning();
+        return { orderId, id: order.id };
+      }),
+    listAll: adminQuery.query(async () => getDb().select().from(schema.orders).orderBy(desc(schema.orders.createdAt)))
+  }),
+
   contact: t.router({
     submit: publicQuery.input(z.object({ name: z.string(), email: z.string(), subject: z.string(), message: z.string() }))
       .mutation(async ({ input }) => {
@@ -145,7 +141,7 @@ const appRouter = t.router({
 const app = new Hono();
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-app.get("/api/health", (c) => c.json({ status: "ok", monolithic: "fixed", node: process.version }));
+app.get("/api/health", (c) => c.json({ status: "ok", monolithic: "complete" }));
 
 app.post("/api/upload", async (c) => {
   try {
