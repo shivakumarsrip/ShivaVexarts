@@ -2,12 +2,13 @@ import { z } from "zod";
 import * as bcrypt from "bcryptjs";
 import * as cookie from "cookie";
 import { TRPCError } from "@trpc/server";
-import { Session } from "../contracts/constants";
-import { getSessionCookieOptions } from "./lib/cookies";
-import { createRouter, publicQuery, authedQuery } from "./middleware";
-import { findUserByEmail, createUser } from "./queries/users";
-import { signSessionToken } from "./lib/session";
-import { env } from "./lib/env";
+import { Session } from "../contracts/constants.js";
+import { getSessionCookieOptions } from "./lib/cookies.js";
+import { createRouter, publicQuery, authedQuery } from "./middleware.js";
+import { findUserByEmail, createUser } from "./queries/users.js";
+import { signSessionToken } from "./lib/session.js";
+import { env } from "./lib/env.js";
+
 
 const BCRYPT_ROUNDS = 12;
 
