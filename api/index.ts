@@ -77,18 +77,40 @@ const appRouter = t.router({
   auth: t.router({
     me: authedQuery.query((opts) => opts.ctx.user),
     login: publicQuery.input(z.object({ email: z.string().email(), password: z.string() })).mutation(async ({ input, ctx }) => {
-      console.log(`[AUTH] Login attempt: ${input.email}`);
+      console.log(`[AUTH] 1. Login attempt started for: ${input.email}`);
+      
+      console.log("[AUTH] 2. Initializing DB connection...");
       const db = getDb();
-      const user = (await db.select().from(schema.users).where(eq(schema.users.email, input.email)))[0];
-      if (!user || !(await bcrypt.compare(input.password, user.password))) {
+      
+      console.log("[AUTH] 3. Searching for user in database...");
+      const users = await db.select().from(schema.users).where(eq(schema.users.email, input.email));
+      const user = users[0];
+      
+      if (!user) {
+        console.warn("[AUTH] 4a. User not found");
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
+      
+      console.log("[AUTH] 4b. User found. Comparing password hash...");
+      const isMatch = await bcrypt.compare(input.password, user.password);
+      
+      if (!isMatch) {
+        console.warn("[AUTH] 5a. Password mismatch");
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      }
+      
+      console.log("[AUTH] 5b. Password matched. Signing JWT...");
       const token = await signSessionToken({ userId: user.id, role: user.role });
+      
+      console.log("[AUTH] 6. Setting session cookie...");
       ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, token, { 
         httpOnly: true, path: "/", sameSite: "lax", secure: true, maxAge: Session.maxAgeMs / 1000 
       }));
+      
+      console.log("[AUTH] 7. Login successful!");
       return { success: true, role: user.role };
     }),
+
     logout: authedQuery.mutation(({ ctx }) => {
       ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, "", { path: "/", maxAge: 0 }));
       return { success: true };
