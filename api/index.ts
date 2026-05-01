@@ -1,6 +1,6 @@
 import { Hono } from "hono";
+import { trpcServer } from "@hono/trpc-server";
 import { handle } from "@hono/node-server/vercel";
-import { bodyLimit } from "hono/body-limit";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
@@ -161,9 +161,9 @@ const appRouter = t.router({
 
 // ── 5. HONO APP ──────────────────────────────────────────────────────────────
 const app = new Hono();
-app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
 app.get("/api/health", (c) => c.json({ status: "ok", monolithic: "complete" }));
+
 
 app.post("/api/upload", async (c) => {
   try {
@@ -174,14 +174,18 @@ app.post("/api/upload", async (c) => {
   } catch (err: any) { return c.json({ error: err.message }, 500); }
 });
 
-app.all("/api/trpc/*", async (c) => {
+app.use("/api/trpc/*", async (c, next) => {
   const user = await authenticateRequest(c.req.raw.headers);
-  return fetchRequestHandler({
+  return trpcServer({
     endpoint: "/api/trpc",
-    req: c.req.raw,
     router: appRouter,
-    createContext: () => ({ user, req: c.req.raw, resHeaders: c.res.headers }),
-  });
+    createContext: (_opts, honoCtx) => ({ 
+      user, 
+      req: honoCtx.req.raw, 
+      resHeaders: honoCtx.res.headers 
+    }),
+  })(c, next);
 });
+
 
 export default handle(app);
