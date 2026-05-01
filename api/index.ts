@@ -171,7 +171,10 @@ const appRouter = t.router({
   })
 });
 
+export type AppRouter = typeof appRouter;
+
 // ── 5. HONO APP ──────────────────────────────────────────────────────────────
+
 const app = new Hono();
 
 app.get("/api/health", (c) => c.json({ status: "ok", monolithic: "complete" }));
