@@ -7,6 +7,7 @@ import superjson from "superjson";
 import * as bcrypt from "bcryptjs";
 import * as cookie from "cookie";
 import * as jose from "jose";
+import { z } from "zod";
 import { put } from "@vercel/blob";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -21,7 +22,8 @@ const JWT_ALG = "HS256";
 const env = {
   get jwtSecret() { return process.env.JWT_SECRET || ""; },
   get databaseUrl() { return process.env.DATABASE_URL || ""; },
-  get adminEmail() { return (process.env.ADMIN_EMAIL || "").toLowerCase(); }
+  get adminEmail() { return (process.env.ADMIN_EMAIL || "").toLowerCase(); },
+  get blobToken() { return process.env.BLOB_READ_WRITE_TOKEN || ""; }
 };
 
 // ── 2. DATABASE CONNECTION ──────────────────────────────────────────────────
@@ -65,12 +67,17 @@ const authedQuery = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: ErrorMessages.unauthenticated });
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
+const adminQuery = authedQuery.use(async ({ ctx, next }) => {
+  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: ErrorMessages.insufficientRole });
+  return next({ ctx });
+});
 
 const appRouter = t.router({
   ping: publicQuery.query(() => ({ ok: true })),
   auth: t.router({
     me: authedQuery.query((opts) => opts.ctx.user),
     login: publicQuery.input(z.object({ email: z.string().email(), password: z.string() })).mutation(async ({ input, ctx }) => {
+      console.log(`[AUTH] Login attempt: ${input.email}`);
       const db = getDb();
       const user = (await db.select().from(schema.users).where(eq(schema.users.email, input.email)))[0];
       if (!user || !(await bcrypt.compare(input.password, user.password))) {
@@ -81,20 +88,51 @@ const appRouter = t.router({
         httpOnly: true, path: "/", sameSite: "lax", secure: true, maxAge: Session.maxAgeMs / 1000 
       }));
       return { success: true, role: user.role };
+    }),
+    logout: authedQuery.mutation(({ ctx }) => {
+      ctx.resHeaders.append("set-cookie", cookie.serialize(Session.cookieName, "", { path: "/", maxAge: 0 }));
+      return { success: true };
     })
   }),
   artwork: t.router({
-    list: publicQuery.query(async () => getDb().select().from(schema.artworks).orderBy(asc(schema.artworks.id)))
+    list: publicQuery.input(z.object({ collection: z.string().optional(), category: z.string().nullish() }).optional())
+      .query(async ({ input }) => {
+        const db = getDb();
+        let q = db.select().from(schema.artworks);
+        const conditions = [];
+        if (input?.collection) conditions.push(eq(schema.artworks.collection, input.collection));
+        if (input?.category && input.category !== "All") conditions.push(eq(schema.artworks.category, input.category));
+        if (conditions.length) return q.where(and(...conditions)).orderBy(asc(schema.artworks.id));
+        return q.orderBy(asc(schema.artworks.id));
+      }),
+    getBySlug: publicQuery.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+      const results = await getDb().select().from(schema.artworks).where(eq(schema.artworks.slug, input.slug));
+      return results[0] || null;
+    })
+  }),
+  contact: t.router({
+    submit: publicQuery.input(z.object({ name: z.string(), email: z.string(), subject: z.string(), message: z.string() }))
+      .mutation(async ({ input }) => {
+        await getDb().insert(schema.contacts).values(input);
+        return { success: true };
+      })
   })
 });
 
 // ── 5. HONO APP ──────────────────────────────────────────────────────────────
-import { z } from "zod";
 const app = new Hono();
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-app.get("/api/health-hono", (c) => c.json({ status: "ok", type: "hono-monolithic" }));
-app.get("/api/health", (c) => c.json({ status: "ok", monolithic: true }));
+app.get("/api/health", (c) => c.json({ status: "ok", monolithic: "fixed", node: process.version }));
+
+app.post("/api/upload", async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get("file") as File;
+    const blob = await put(file.name, file, { access: 'public', token: env.blobToken });
+    return c.json(blob);
+  } catch (err: any) { return c.json({ error: err.message }, 500); }
+});
 
 app.all("/api/trpc/*", async (c) => {
   const user = await authenticateRequest(c.req.raw.headers);
@@ -105,7 +143,5 @@ app.all("/api/trpc/*", async (c) => {
     createContext: () => ({ user, req: c.req.raw, resHeaders: c.res.headers }),
   });
 });
-
-app.onError((err, c) => c.json({ error: "Internal Error", message: err.message }, 500));
 
 export default handle(app);
