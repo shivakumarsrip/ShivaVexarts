@@ -5,28 +5,28 @@ import { Loader2 } from "lucide-react";
 
 const collections = [
   {
-    id: "movie_posters",
+    id: "digital_illustrations",
     label: "COLLECTION 01",
-    title: "MOVIE POSTERS",
+    title: "ICONIC PORTRAITS",
     description:
-      "Official movie posters for Tamil cinema — from gritty crime thrillers to action blockbusters. Each poster is a digital print available in multiple sizes.",
-    filters: ["All", "Crime", "Action", "Drama", "Horror"],
+      "Precision digital paintings of world-renowned personalities, from sports legends to cinematic icons. Each piece captures the soul and energy of its subject in stunning detail.",
+    filters: ["All", "Celebrity Portraits", "Pop Culture"],
+  },
+  {
+    id: "movie_posters",
+    label: "COLLECTION 02",
+    title: "CINEMATIC VISIONS",
+    description:
+      "High-impact digital art inspired by the world of cinema. A fusion of storytelling and graphic design that brings your favorite moments and characters to life.",
+    filters: ["All", "Cinema", "Pop Culture"],
   },
   {
     id: "social_awareness",
-    label: "COLLECTION 02",
-    title: "SOCIAL AWARENESS",
-    description:
-      "Art with a message — pieces created for Women's Day, education advocacy, anti-war campaigns, and social justice movements.",
-    filters: ["All", "Anti-War", "Women's Rights", "Social Justice"],
-  },
-  {
-    id: "digital_illustrations",
     label: "COLLECTION 03",
-    title: "DIGITAL ILLUSTRATIONS",
+    title: "SPIRITUAL & ARTISTIC",
     description:
-      "Commemorative illustrations, conceptual art, and digital pieces celebrating science, culture, and iconic personalities.",
-    filters: ["All", "Space", "Portrait"],
+      "An exploration of digital concepts, spiritual themes, and social messages. Thought-provoking art designed to inspire and create meaningful impact.",
+    filters: ["All", "Spirituality", "Artistic", "Digital Art", "Social Awareness"],
   },
 ];
 
@@ -43,8 +43,15 @@ function GalleryChapter({
     category: activeFilter === "All" ? undefined : activeFilter,
   });
 
+  // Only render if there are artworks or if it's the first collection (to show state)
+  const hasArtworks = (artworks && artworks.length > 0);
+
+  if (!isLoading && !hasArtworks && collection.id !== "digital_illustrations") {
+    return null;
+  }
+
   return (
-    <div className={`${isLast ? "" : "mb-20 md:mb-32"}`}>
+    <div className={`${isLast ? "" : "mb-20 md:mb-32"} animate-in fade-in slide-in-from-bottom-4 duration-1000`}>
       {/* Chapter Header */}
       <div className="mb-10 md:mb-14">
         <span className="font-body text-[12px] sm:text-[14px] font-medium text-[#F59E0B] tracking-[0.2em] uppercase">
