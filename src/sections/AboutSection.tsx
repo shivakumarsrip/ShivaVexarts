@@ -46,7 +46,7 @@ export default function AboutSection() {
 
             <div className="space-y-4 mb-8">
               <p className="font-body text-[16px] text-[#A1A1AA] leading-[1.7]">
-                Digital artist and movie publicity designer based in Chennai, India. With over a
+                Digital artist and movie publicity designer based in Hyderabad, India. With over a
                 decade of experience in the advertising, television, and film industry, I create
                 visual narratives that command attention.
               </p>

@@ -14,34 +14,50 @@ async function syncRealBlobs() {
   const { blobs } = await list({ token });
   const db = getDb();
 
-  console.log("Wiping dummy data...");
+  console.log("Wiping database for clean categorization...");
   await db.delete(artworks);
 
   const realArtworks = blobs.map(blob => {
-    // Clean up filename for title
     let name = decodeURIComponent(blob.pathname).replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+    const lowerName = name.toLowerCase();
     
-    // Smart categorization
-    let collection: "movie_posters" | "social_awareness" | "digital_illustrations" = "digital_illustrations";
-    let category = "Digital Art";
+    // Default
+    let collection: "portraits" | "fan_art" | "posters" | "illustrations" | "devotional" = "illustrations";
+    let category = "Illustration";
 
-    if (name.toLowerCase().includes("poster") || name.toLowerCase().includes("movie")) {
-      collection = "movie_posters";
-      category = "Cinema";
-    } else if (name.toLowerCase().includes("caste") || name.toLowerCase().includes("rights") || name.toLowerCase().includes("education")) {
-      collection = "social_awareness";
-      category = "Social Awareness";
+    // 1. Portraits Collection
+    if (lowerName.match(/virat|kohli|msd|dhoni|mandhanna|kapoor|downey|rdj|samantha|ritika|nayak|actor|nani|anirudh|mathew|mythili|uma shankar|amal|avinash/i)) {
+      collection = "portraits";
+      if (lowerName.match(/virat|kohli|msd|dhoni|mandhanna/i)) category = "Cricketer";
+      else if (lowerName.match(/downey|rdj|mathew/i)) category = "Hollywood";
+      else if (lowerName.match(/kapoor|bollywood/i)) category = "Bollywood";
+      else if (lowerName.match(/anirudh|musician/i)) category = "Musician";
+      else category = "Tollywood";
+    } 
+    // 2. Devotional Collection
+    else if (lowerName.match(/shiva|radha|krishna|devotional|god/i)) {
+      collection = "devotional";
+      category = "Devotional";
     }
-
-    // Specific category mapping
-    if (name.match(/Virat|MSD|Kohli|Mandhanna|Kapoor|Downey|Ritika|Samantha|RDJ|Uma Shankar|Nayak/i)) {
-      category = "Celebrity Portraits";
-    } else if (name.match(/Spiderman|Sanju|Jodi|Bala/i)) {
-      category = "Pop Culture";
-    } else if (name.match(/Shiva|Radha|Krishna/i)) {
-      category = "Spirituality";
-    } else if (name.match(/Sun Set|Smoking|Vintage|Project/i)) {
-      category = "Artistic";
+    // 3. Fan Art Collection
+    else if (lowerName.match(/spiderman|batman|superhero|marvel|dc|ironman|captain america/i)) {
+      collection = "fan_art";
+      if (lowerName.includes("spiderman") || lowerName.includes("marvel")) category = "Marvel";
+      else if (lowerName.includes("batman") || lowerName.includes("dc")) category = "DC Comics";
+      else category = "Marvel";
+    }
+    // 4. Movie Posters Collection
+    else if (lowerName.match(/poster|movie|akhanda|sanju|jodi|maharaja|maaveeran|farhana|asvins|balaaaa|vikram/i)) {
+      collection = "posters";
+      if (lowerName.match(/akhanda|maaveeran|maharaja|vikram|balaaaa/i)) category = "Tollywood";
+      else category = "Action";
+    }
+    // 5. Illustrations Collection
+    else {
+      collection = "illustrations";
+      if (lowerName.match(/sun set|scenery|landscape/i)) category = "Scenery";
+      else if (lowerName.match(/smoking|vintage|project/i)) category = "Artistic";
+      else category = "Illustration";
     }
 
     return {
@@ -49,7 +65,7 @@ async function syncRealBlobs() {
       title: name,
       category: category,
       collection: collection,
-      description: `Original digital artwork: ${name}. A high-resolution professional digital illustration from the Shiva Vexarts collection.`,
+      description: `Premium digital artwork: ${name}. A high-resolution professional digital illustration from the Shiva Vexarts collection. Perfect for high-quality prints and digital displays.`,
       image: blob.url,
       basePrice: 2000,
       year: new Date(blob.uploadedAt).getFullYear(),
@@ -62,13 +78,13 @@ async function syncRealBlobs() {
   for (const artwork of realArtworks) {
     try {
       await db.insert(artworks).values(artwork);
-      console.log(`Added real artwork: ${artwork.title}`);
+      console.log(`Synced: [${artwork.collection}] [${artwork.category}] ${artwork.title}`);
     } catch (e) {
-      console.error(`Failed to add ${artwork.title}:`, e);
+      console.error(`Failed: ${artwork.title}:`, e);
     }
   }
 
-  console.log(`Successfully synced ${realArtworks.length} real artworks.`);
+  console.log(`Successfully categorized and synced ${realArtworks.length} real artworks.`);
 }
 
 syncRealBlobs().catch(console.error);

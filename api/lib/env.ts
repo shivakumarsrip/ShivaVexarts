@@ -1,4 +1,6 @@
-// Simple and direct environment variable access for Vercel/Node.js
+import "dotenv/config";
+
+// Simple and direct environment variable access for Vercel/Node.js/Local
 export const env = {
   get jwtSecret() {
     return process.env.JWT_SECRET || "";

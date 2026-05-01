@@ -8,8 +8,8 @@ export const artworkRouter = createRouter({
   list: publicQuery
     .input(
       z.object({
-        collection: z.enum(["movie_posters", "social_awareness", "digital_illustrations"]).optional(),
-        category: z.string().optional(),
+        collection: z.enum(["portraits", "fan_art", "posters", "illustrations", "devotional"]).optional(),
+        category: z.string().nullish(), // Allow null or undefined
       }).optional()
     )
     .query(async ({ input }) => {

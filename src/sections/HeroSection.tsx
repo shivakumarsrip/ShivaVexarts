@@ -269,7 +269,7 @@ export default function HeroSection() {
         <div className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-[#F59E0B] rounded-full mb-8">
           <MapPin size={14} className="text-[#F59E0B]" />
           <span className="font-body text-[13px] font-medium text-[#F59E0B]">
-            Chennai, India
+            Hyderabad, India
           </span>
         </div>
 

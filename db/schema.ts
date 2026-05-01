@@ -14,9 +14,11 @@ import {
 export const roleEnum = pgEnum("role", ["user", "admin"]);
 
 export const collectionEnum = pgEnum("collection", [
-  "movie_posters",
-  "social_awareness",
-  "digital_illustrations",
+  "portraits",
+  "fan_art",
+  "posters",
+  "illustrations",
+  "devotional",
 ]);
 
 export const orderStatusEnum = pgEnum("order_status", [

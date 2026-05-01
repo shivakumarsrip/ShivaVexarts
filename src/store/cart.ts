@@ -96,7 +96,7 @@ export const useCartStore = create<CartState>()(
         ),
     }),
     {
-      name: "vexarts-cart",
+      name: "shiva-vexarts-cart",
       partialize: (state) => ({ items: state.items }),
     }
   )

@@ -9,7 +9,7 @@ export default function Footer() {
       <div className="container-vex py-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-body text-[13px] text-[#52525B]">
-            VEXARTS DIGITAL 2025
+            SHIVA VEXARTS 2025
           </p>
 
           <div className="flex items-center gap-4">

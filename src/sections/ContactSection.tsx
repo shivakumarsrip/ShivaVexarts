@@ -178,7 +178,7 @@ export default function ContactSection() {
                 <div>
                   <h4 className="font-body text-[14px] font-medium text-white mb-1">Location</h4>
                   <p className="font-body text-[14px] text-[#A1A1AA]">
-                    Chennai, Tamil Nadu, India
+                    Hyderabad, Telangana, India
                   </p>
                 </div>
               </div>

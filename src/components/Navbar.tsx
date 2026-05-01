@@ -56,7 +56,7 @@ export default function Navbar() {
           onClick={() => navigate("/")}
           className="font-display text-[20px] tracking-[0.1em] text-white hover:text-[#F59E0B] transition-colors"
         >
-          VEXARTS
+          SHIVA VEXARTS
         </button>
 
         {/* Center Nav Links - Desktop */}

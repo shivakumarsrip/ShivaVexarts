@@ -5,28 +5,44 @@ import { Loader2 } from "lucide-react";
 
 const collections = [
   {
-    id: "digital_illustrations",
+    id: "portraits" as const,
     label: "COLLECTION 01",
-    title: "ICONIC PORTRAITS",
+    title: "CELEBRITY PORTRAITS",
     description:
-      "Precision digital paintings of world-renowned personalities, from sports legends to cinematic icons. Each piece captures the soul and energy of its subject in stunning detail.",
-    filters: ["All", "Celebrity Portraits", "Pop Culture"],
+      "Precision vector portraits of iconic figures from cinema, sports, and music. Every detail is meticulously crafted to capture the essence of the legend.",
+    filters: ["All", "Cricketer", "Tollywood", "Hollywood", "Bollywood", "Musician"],
   },
   {
-    id: "movie_posters",
+    id: "fan_art" as const,
     label: "COLLECTION 02",
-    title: "CINEMATIC VISIONS",
+    title: "SUPERHEROES & FAN ART",
     description:
-      "High-impact digital art inspired by the world of cinema. A fusion of storytelling and graphic design that brings your favorite moments and characters to life.",
-    filters: ["All", "Cinema", "Pop Culture"],
+      "A tribute to the characters we love. From the gritty streets of Gotham to the vibrant Marvel universe, explore our unique take on legendary heroes.",
+    filters: ["All", "Marvel", "DC Comics"],
   },
   {
-    id: "social_awareness",
+    id: "posters" as const,
     label: "COLLECTION 03",
-    title: "SPIRITUAL & ARTISTIC",
+    title: "MOVIE POSTERS",
     description:
-      "An exploration of digital concepts, spiritual themes, and social messages. Thought-provoking art designed to inspire and create meaningful impact.",
-    filters: ["All", "Spirituality", "Artistic", "Digital Art", "Social Awareness"],
+      "Cinematic posters that tell a story. High-impact designs inspired by the biggest blockbusters, perfect for any movie lover's collection.",
+    filters: ["All", "Tollywood", "Action"],
+  },
+  {
+    id: "illustrations" as const,
+    label: "COLLECTION 04",
+    title: "CONCEPTUAL ILLUSTRATIONS",
+    description:
+      "Original conceptual pieces and digital illustrations exploring themes of scenery, emotion, and surrealism.",
+    filters: ["All", "Landscape", "Illustration", "Scenery", "Artistic"],
+  },
+  {
+    id: "devotional" as const,
+    label: "COLLECTION 05",
+    title: "DEVOTIONAL ART",
+    description:
+      "Divine and spiritual digital paintings that bring peace and energy to your space. A modern approach to traditional deities.",
+    filters: ["All", "Devotional"],
   },
 ];
 
@@ -39,41 +55,45 @@ function GalleryChapter({
 }) {
   const [activeFilter, setActiveFilter] = useState("All");
   const { data: artworks, isLoading } = trpc.artwork.list.useQuery({
-    collection: collection.id as "movie_posters" | "social_awareness" | "digital_illustrations",
+    collection: collection.id,
     category: activeFilter === "All" ? undefined : activeFilter,
+  }, {
+    staleTime: 5 * 60 * 1000, // Cache artworks for 5 minutes locally
   });
 
-  // Only render if there are artworks or if it's the first collection (to show state)
   const hasArtworks = (artworks && artworks.length > 0);
 
-  if (!isLoading && !hasArtworks && collection.id !== "digital_illustrations") {
+  if (!isLoading && !hasArtworks) {
     return null;
   }
 
   return (
-    <div className={`${isLast ? "" : "mb-20 md:mb-32"} animate-in fade-in slide-in-from-bottom-4 duration-1000`}>
+    <div 
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 500px' }}
+      className={`${isLast ? "" : "mb-24 md:mb-36"} animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out`}
+    >
       {/* Chapter Header */}
-      <div className="mb-10 md:mb-14">
-        <span className="font-body text-[12px] sm:text-[14px] font-medium text-[#F59E0B] tracking-[0.2em] uppercase">
+      <div className="mb-12 md:mb-16">
+        <span className="font-body text-[12px] sm:text-[14px] font-bold text-[#F59E0B] tracking-[0.25em] uppercase">
           {collection.label}
         </span>
-        <h2 className="font-display text-[36px] sm:text-[48px] md:text-[56px] text-white uppercase mt-2 leading-tight">
+        <h2 className="font-display text-[42px] sm:text-[56px] md:text-[64px] text-white uppercase mt-3 leading-[0.9]">
           {collection.title}
         </h2>
-        <p className="font-body text-[15px] sm:text-[16px] text-[#A1A1AA] mt-3 max-w-[640px] leading-relaxed">
+        <p className="font-body text-[15px] sm:text-[16px] text-[#A1A1AA] mt-5 max-w-[640px] leading-relaxed opacity-80">
           {collection.description}
         </p>
 
         {/* Filter Pills */}
-        <div className="flex flex-wrap gap-2 mt-5">
+        <div className="flex flex-wrap gap-2.5 mt-8">
           {collection.filters.map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-1.5 rounded-full font-body text-[12px] sm:text-[13px] font-medium transition-all ${
+              className={`px-5 py-2 rounded-full font-body text-[11px] sm:text-[12px] font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeFilter === filter
-                  ? "bg-[#F59E0B] text-[#09090B]"
-                  : "bg-[#27272A] text-[#A1A1AA] hover:bg-[#3f3f46]"
+                  ? "bg-[#F59E0B] text-[#09090B] shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                  : "bg-[#18181B] text-[#71717A] border border-[#27272A] hover:border-[#3f3f46] hover:text-white"
               }`}
             >
               {filter}
@@ -88,7 +108,7 @@ function GalleryChapter({
           <Loader2 size={32} className="text-[#F59E0B] animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
           {artworks?.map((artwork) => (
             <ArtworkCard key={artwork.id} artwork={artwork} />
           ))}
@@ -100,8 +120,12 @@ function GalleryChapter({
 
 export default function GallerySection() {
   return (
-    <section id="gallery" className="relative py-20 md:py-32 bg-[#09090B]">
-      <div className="container-vex">
+    <section id="gallery" className="relative py-24 md:py-40 bg-[#09090B]">
+      {/* Subtle background ambient light */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#F59E0B]/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#F59E0B]/3 blur-[150px] rounded-full pointer-events-none" />
+      
+      <div className="container-vex relative z-10">
         {collections.map((collection, index) => (
           <GalleryChapter
             key={collection.id}

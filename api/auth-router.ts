@@ -33,10 +33,13 @@ export const authRouter = createRouter({
       }
 
       const hashed = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+      const isAdminEmail = input.email.toLowerCase() === (process.env.ADMIN_EMAIL || "").toLowerCase();
+      
       const user = await createUser({
         email: input.email,
         password: hashed,
         name: input.name,
+        role: isAdminEmail ? "admin" : "user",
       });
 
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

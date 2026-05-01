@@ -14,7 +14,7 @@ interface Message {
 const WELCOME_MESSAGE: Message = {
   id: "welcome",
   role: "assistant",
-  content: `Hello! I'm the Vexarts Digital assistant. I can help you with:
+  content: `Hello! I'm the Shiva Vexarts assistant. I can help you with:
 
 - Finding artwork in our gallery
 - Understanding pricing and sizes
@@ -31,7 +31,7 @@ const RESPONSES: Record<string, string> = {
   commission: "Shivakumar is available for commissions including movie posters, album art, social media campaigns, and custom digital illustrations. Please use the contact form or reach out via Instagram @shiva_vexarts.",
   shipping: "Shipping rates: Nepal (Kathmandu Valley) - Rs. 150 (2-3 days), Nepal (Outside Valley) - Rs. 250 (3-5 days), India - Rs. 500 (7-10 days), International - Rs. 1,500 (10-15 days).",
   payment: "We accept payments via Khalti payment gateway. All transactions are secure and encrypted. You can pay during the checkout process.",
-  artist: "Shivakumar S is a digital artist and movie publicity designer based in Chennai, India. With over a decade of experience, he has created posters for Tamil cinema and social awareness campaigns. His work has 387K+ views and 14,000+ appreciations.",
+  artist: "Shivakumar S is a digital artist and movie publicity designer based in Hyderabad, India. With over a decade of experience, he has created posters for Tamil cinema and social awareness campaigns. His work has 387K+ views and 14,000+ appreciations.",
   gallery: "Our gallery features three collections: Movie Posters (8 artworks), Social Awareness Art (4 artworks), and Digital Illustrations (2 artworks). Browse them on the home page!",
   default: "I'd be happy to help! Could you provide more details about what you're looking for? You can ask about pricing, sizes, commissions, shipping, or browse our gallery.",
 };
@@ -110,7 +110,7 @@ export default function AIChat() {
             <Sparkles size={16} className="text-[#F59E0B]" />
           </div>
           <div>
-            <h1 className="font-body text-[16px] font-semibold text-white">Vexarts AI Assistant</h1>
+            <h1 className="font-body text-[16px] font-semibold text-white">Shiva Vexarts AI Assistant</h1>
             <p className="font-body text-[12px] text-[#16A34A]">Online</p>
           </div>
         </div>
