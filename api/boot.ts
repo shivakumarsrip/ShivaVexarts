@@ -1,11 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
-import { put } from "@vercel/blob";
-import { trpcServer } from "@hono/trpc-server";
-import { appRouter } from "./router";
 import { env } from "./lib/env";
-import { authenticateRequest } from "./lib/session";
 
 console.log("[SYSTEM] Initializing Hono app...");
 const app = new Hono();
@@ -49,6 +45,9 @@ app.get("/api/config-check", (c) => {
 
 app.post("/api/upload", async (c) => {
   try {
+    const { authenticateRequest } = await import("./lib/session");
+    const { put } = await import("@vercel/blob");
+
     const user = await authenticateRequest(c.req.raw.headers);
     if (user.role !== "admin") {
       return c.json({ error: "Only admins can upload artwork images" }, 403);
@@ -82,28 +81,41 @@ app.post("/api/upload", async (c) => {
 app.all("/api/trpc/:path*", async (c) => {
   console.log(`[tRPC] Request: ${c.req.method} ${c.req.path}`);
   
-  let user = null;
   try {
-    user = await authenticateRequest(c.req.raw.headers);
-    console.log(`[tRPC] Auth success: ${user.email}`);
+    // Dynamic imports to isolate initialization
+    const { appRouter } = await import("./router");
+    const { trpcServer } = await import("@hono/trpc-server");
+    const { authenticateRequest } = await import("./lib/session");
+
+    let user = null;
+    try {
+      user = await authenticateRequest(c.req.raw.headers);
+      console.log(`[tRPC] Auth success: ${user.email}`);
+    } catch (err) {
+      // Expected for public routes
+    }
+
+    const handler = trpcServer({
+      endpoint: "/api/trpc",
+      router: appRouter,
+      createContext: (_opts, honoCtx) => {
+        return {
+          user,
+          req: honoCtx.req.raw,
+          resHeaders: new Headers(),
+          honoCtx,
+        };
+      },
+    });
+
+    return handler(c);
   } catch (err) {
-    // Expected for public routes
+    console.error("[tRPC] Initialization error:", err);
+    return c.json({ 
+      error: "tRPC initialization failed", 
+      message: err instanceof Error ? err.message : String(err) 
+    }, 500);
   }
-
-  const handler = trpcServer({
-    endpoint: "/api/trpc",
-    router: appRouter,
-    createContext: (_opts, honoCtx) => {
-      return {
-        user,
-        req: honoCtx.req.raw,
-        resHeaders: new Headers(),
-        honoCtx,
-      };
-    },
-  });
-
-  return handler(c);
 });
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
