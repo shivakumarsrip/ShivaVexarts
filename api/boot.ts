@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
-import { put } from "@vercel/blob";
-import { trpcServer } from "@hono/trpc-server";
-import { appRouter } from "./router";
+// import { put } from "@vercel/blob";
+// import { trpcServer } from "@hono/trpc-server";
+// import { appRouter } from "./router";
 import { env } from "./lib/env";
 import { authenticateRequest } from "./lib/session";
 
@@ -47,6 +47,7 @@ app.get("/api/config-check", (c) => {
   });
 });
 
+/*
 app.post("/api/upload", async (c) => {
   try {
     const user = await authenticateRequest(c.req.raw.headers);
@@ -78,7 +79,9 @@ app.post("/api/upload", async (c) => {
     return c.json({ error: message }, 500);
   }
 });
+*/
 
+/*
 app.all("/api/trpc/:path*", async (c) => {
   console.log(`[tRPC] Request: ${c.req.method} ${c.req.path}`);
   
@@ -105,6 +108,7 @@ app.all("/api/trpc/:path*", async (c) => {
 
   return handler(c);
 });
+*/
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
