@@ -128,35 +128,45 @@ export const authRouter = createRouter({
         });
       }
 
-      const user = await findUserByEmail(email);
-      if (!user) {
-        console.warn(`[AUTH] Login failed: User not found (${email})`);
+      try {
+        const user = await findUserByEmail(email);
+        if (!user) {
+          console.warn(`[AUTH] Login failed: User not found (${email})`);
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password.",
+          });
+        }
+
+        const valid = isBcryptHash(user.password)
+          ? await bcrypt.compare(input.password, user.password)
+          : input.password === user.password;
+        if (!valid) {
+          console.warn(`[AUTH] Login failed: Invalid password for ${email}`);
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password.",
+          });
+        }
+
+        if (!isBcryptHash(user.password)) {
+          const hashed = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+          await updateUserPassword(user.id, hashed);
+        }
+
+        const token = await signSessionToken({ userId: user.id, role: user.role });
+        setSessionCookie(ctx, token);
+
+        console.log(`[AUTH] Login success: ${email} (${user.role})`);
+        return { success: true, role: user.role };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        console.error(`[AUTH] Unexpected error during login for ${email}:`, err);
         throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password.",
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An unexpected error occurred during login.",
         });
       }
-
-      const valid = isBcryptHash(user.password)
-        ? await bcrypt.compare(input.password, user.password)
-        : input.password === user.password;
-      if (!valid) {
-        console.warn(`[AUTH] Login failed: Invalid password for ${email}`);
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password.",
-        });
-      }
-
-      if (!isBcryptHash(user.password)) {
-        const hashed = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
-        await updateUserPassword(user.id, hashed);
-      }
-
-      const token = await signSessionToken({ userId: user.id, role: user.role });
-      setSessionCookie(ctx, token);
-
-      return { success: true, role: user.role };
     }),
 
   // ── Log out ────────────────────────────────────────────────────

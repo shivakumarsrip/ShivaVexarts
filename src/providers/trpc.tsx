@@ -38,6 +38,14 @@ const trpcClient = trpc.createClient({
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+        }).then(res => {
+          if (!res.ok) {
+            console.error(`[tRPC Fetch Error] ${res.status} ${res.statusText} for ${input}`);
+          }
+          return res;
+        }).catch(err => {
+          console.error(`[tRPC Network Error]`, err);
+          throw err;
         });
       },
     }),

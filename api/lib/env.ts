@@ -26,3 +26,9 @@ export const env = {
     return process.env.PUBLIC_ASSET_BASE_URL || process.env.VITE_BLOB_BASE_URL || "";
   },
 };
+
+// Startup validation
+if (env.isProduction) {
+  if (!env.databaseUrl) console.error("[ENV] CRITICAL: DATABASE_URL is not defined!");
+  if (!env.jwtSecret) console.error("[ENV] CRITICAL: JWT_SECRET is not defined!");
+}

@@ -15,6 +15,7 @@ export const artworkRouter = createRouter({
       }).optional()
     )
     .query(async ({ input }) => {
+      console.log(`[ARTWORK] Listing artworks with filter:`, input);
       const db = getDb();
       const conditions = [];
 
@@ -25,11 +26,15 @@ export const artworkRouter = createRouter({
         conditions.push(eq(artworks.category, input.category));
       }
 
+      let results;
       if (conditions.length > 0) {
-        return db.select().from(artworks).where(and(...conditions)).orderBy(asc(artworks.id));
+        results = await db.select().from(artworks).where(and(...conditions)).orderBy(asc(artworks.id));
+      } else {
+        results = await db.select().from(artworks).orderBy(asc(artworks.id));
       }
 
-      return db.select().from(artworks).orderBy(asc(artworks.id));
+      console.log(`[ARTWORK] Found ${results.length} artworks.`);
+      return results;
     }),
 
   listAll: publicQuery.query(async () => {

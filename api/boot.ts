@@ -18,6 +18,14 @@ app.use("/api/*", cors({
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
+app.onError((err, c) => {
+  console.error(`[ERROR] ${c.req.method} ${c.req.url}:`, err);
+  return c.json({
+    error: err instanceof Error ? err.message : "Internal Server Error",
+    stack: env.isProduction ? undefined : (err as any).stack,
+  }, 500);
+});
+
 app.get("/api/health", (c) => {
   return c.json({
     status: "ok",
@@ -32,6 +40,9 @@ app.get("/api/config-check", (c) => {
     jwt: Boolean(env.jwtSecret),
     blobStorage: Boolean(env.blobReadWriteToken),
     assetBaseUrl: env.publicAssetBaseUrl || "static-public-assets",
+    isProduction: env.isProduction,
+    vercel: Boolean(process.env.VERCEL),
+    nodeEnv: process.env.NODE_ENV,
   });
 });
 
@@ -67,25 +78,31 @@ app.post("/api/upload", async (c) => {
   }
 });
 
-app.all("/api/trpc/:path*", async (c, next) => {
+app.all("/api/trpc/:path*", async (c) => {
+  console.log(`[tRPC] Request: ${c.req.method} ${c.req.path}`);
+  
   let user = null;
   try {
     user = await authenticateRequest(c.req.raw.headers);
-  } catch {
-    // Public tRPC procedures, including login and gallery reads, must still run
-    // when the request has no valid session cookie.
+    console.log(`[tRPC] Auth success: ${user.email}`);
+  } catch (err) {
+    // Expected for public routes
   }
 
-  return trpcServer({
+  const handler = trpcServer({
     endpoint: "/api/trpc",
     router: appRouter,
-    createContext: (opts, honoCtx) => ({
-      user,
-      req: honoCtx.req.raw,
-      resHeaders: opts.resHeaders,
-      honoCtx,
-    }),
-  })(c, next);
+    createContext: (_opts, honoCtx) => {
+      return {
+        user,
+        req: honoCtx.req.raw,
+        resHeaders: new Headers(),
+        honoCtx,
+      };
+    },
+  });
+
+  return handler(c);
 });
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));

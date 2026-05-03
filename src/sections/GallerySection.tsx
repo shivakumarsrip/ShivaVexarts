@@ -110,7 +110,7 @@ function GalleryChapter({
 }
 
 export default function GallerySection() {
-  const { data: allArtworks, isLoading } = trpc.artwork.listAll.useQuery();
+  const { data: allArtworks, isLoading, error } = trpc.artwork.listAll.useQuery();
 
   const dynamicCollections = useMemo(() => {
     if (!allArtworks) return [];
@@ -141,6 +141,27 @@ export default function GallerySection() {
     return (
       <div className="min-h-screen bg-[#09090B] flex items-center justify-center">
         <Loader2 size={48} className="text-[#F59E0B] animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-[400px] bg-[#09090B] flex flex-col items-center justify-center text-center px-4">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+          <span className="text-red-500 text-2xl font-bold">!</span>
+        </div>
+        <h3 className="text-white text-2xl font-display uppercase mb-2">Gallery Load Failed</h3>
+        <p className="text-[#A1A1AA] font-body max-w-md">
+          We encountered an issue connecting to the artwork database. 
+          Please verify your connection and try again.
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-8 px-6 py-3 bg-white/5 border border-white/10 text-white font-bold uppercase text-xs tracking-widest hover:bg-white/10 transition-colors"
+        >
+          Retry Connection
+        </button>
       </div>
     );
   }
