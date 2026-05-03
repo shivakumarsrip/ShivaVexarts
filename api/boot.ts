@@ -59,7 +59,7 @@ app.post("/api/upload", async (c) => {
   }
 });
 
-app.use("/api/trpc/*", async (c, next) => {
+app.all("/api/trpc/:path*", async (c, next) => {
   let user = null;
   try {
     user = await authenticateRequest(c.req.raw.headers);

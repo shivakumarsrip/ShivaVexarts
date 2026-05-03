@@ -14,17 +14,21 @@ const collectionMetadata: Record<string, { title: string; description: string }>
     title: "SUPERHEROES & FAN ART",
     description: "A tribute to the characters we love. From the gritty streets of Gotham to the vibrant Marvel universe, explore our unique take on legendary heroes.",
   },
-  posters: {
+  movie_posters: {
     title: "MOVIE POSTERS",
     description: "Cinematic posters that tell a story. High-impact designs inspired by the biggest blockbusters, perfect for any movie lover's collection.",
   },
-  illustrations: {
+  digital_illustrations: {
     title: "CONCEPTUAL ILLUSTRATIONS",
     description: "Original conceptual pieces and digital illustrations exploring themes of scenery, emotion, and surrealism.",
   },
   devotional: {
     title: "DEVOTIONAL ART",
     description: "Divine and spiritual digital paintings that bring peace and energy to your space. A modern approach to traditional deities.",
+  },
+  "Client Works": {
+    title: "CLIENT COMMISSIONS",
+    description: "Custom artworks and professional projects created for clients across various industries.",
   },
 };
 
