@@ -4,44 +4,40 @@ import { bodyLimit } from "hono/body-limit";
 // import { put } from "@vercel/blob";
 // import { trpcServer } from "@hono/trpc-server";
 // import { appRouter } from "./router";
-import { env } from "./lib/env";
+// import { env } from "./lib/env";
 // import { authenticateRequest } from "./lib/session";
 
 console.log("[SYSTEM] Initializing Hono app...");
 const app = new Hono();
 
-app.use("/api/*", cors({
-  origin: (origin) => origin,
-  credentials: true,
-  allowMethods: ["GET", "POST", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization", "x-trpc-source"],
-}));
-
-app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
+// app.use("/api/*", cors({ ... }));
+// app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
 app.onError((err, c) => {
   console.error(`[ERROR] ${c.req.method} ${c.req.url}:`, err);
   return c.json({
     error: err instanceof Error ? err.message : "Internal Server Error",
-    stack: env.isProduction ? undefined : (err as any).stack,
+    // stack: env.isProduction ? undefined : (err as any).stack,
   }, 500);
 });
 
 app.get("/api/health", (c) => {
   return c.json({
     status: "ok",
-    env: env.isProduction ? "production" : "development",
+    // env: env.isProduction ? "production" : "development",
     timestamp: new Date().toISOString(),
   });
 });
 
 app.get("/api/config-check", (c) => {
   return c.json({
+    /*
     database: Boolean(env.databaseUrl),
     jwt: Boolean(env.jwtSecret),
     blobStorage: Boolean(env.blobReadWriteToken),
     assetBaseUrl: env.publicAssetBaseUrl || "static-public-assets",
     isProduction: env.isProduction,
+    */
     vercel: Boolean(process.env.VERCEL),
     nodeEnv: process.env.NODE_ENV,
   });
