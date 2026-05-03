@@ -7,6 +7,7 @@ import { appRouter } from "./router";
 import { env } from "./lib/env";
 import { authenticateRequest } from "./lib/session";
 
+console.log("[SYSTEM] Initializing Hono app...");
 const app = new Hono();
 
 app.use("/api/*", cors({
