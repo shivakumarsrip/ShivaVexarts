@@ -2,7 +2,7 @@ import { authRouter } from "./auth-router";
 import { artworkRouter } from "./artwork-router";
 import { orderRouter } from "./order-router";
 import { contactRouter } from "./contact-router";
-import { createRouter, publicQuery } from "./middleware.js";
+import { createRouter, publicQuery } from "./middleware";
 
 
 export const appRouter = createRouter({

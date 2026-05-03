@@ -1,9 +1,10 @@
 import { config } from "dotenv";
 
-const mode = process.env.NODE_ENV === "production" ? "production" : "local";
-
-config({ path: `.env.${mode}` });
-config({ path: ".env" });
+if (!process.env.VERCEL) {
+  const mode = process.env.NODE_ENV === "production" ? "production" : "local";
+  config({ path: `.env.${mode}` });
+  config({ path: ".env" });
+}
 
 export const env = {
   get jwtSecret() {

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import * as schema from "../../db/schema.js";
-import { getDb } from "./connection.js";
+import * as schema from "../../db/schema";
+import { getDb } from "./connection";
 
 
 export async function findUserByEmail(email: string) {

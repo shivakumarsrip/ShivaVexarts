@@ -1,12 +1,20 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import { put } from "@vercel/blob";
 import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "./router";
-import { env } from "./lib/env.js";
-import { authenticateRequest } from "./lib/session.js";
+import { env } from "./lib/env";
+import { authenticateRequest } from "./lib/session";
 
 const app = new Hono();
+
+app.use("/api/*", cors({
+  origin: (origin) => origin,
+  credentials: true,
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization", "x-trpc-source"],
+}));
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 

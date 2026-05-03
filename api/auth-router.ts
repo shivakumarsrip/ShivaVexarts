@@ -4,12 +4,12 @@ import { setCookie, deleteCookie } from "hono/cookie";
 import * as cookie from "cookie";
 import type { Context } from "hono";
 import { TRPCError } from "@trpc/server";
-import { Session } from "../contracts/constants.js";
-import { getSessionCookieOptions } from "./lib/cookies.js";
-import { createRouter, publicQuery, authedQuery } from "./middleware.js";
-import { findUserByEmail, createUser, updateUserPassword } from "./queries/users.js";
-import { signSessionToken } from "./lib/session.js";
-import { env } from "./lib/env.js";
+import { Session } from "../contracts/constants";
+import { getSessionCookieOptions } from "./lib/cookies";
+import { createRouter, publicQuery, authedQuery } from "./middleware";
+import { findUserByEmail, createUser, updateUserPassword } from "./queries/users";
+import { signSessionToken } from "./lib/session";
+import { env } from "./lib/env";
 
 
 const BCRYPT_ROUNDS = 12;
